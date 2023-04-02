@@ -14,7 +14,25 @@ data class JarToExeConfig(
     var jar: JarConfig = JarConfig(),
     var jre: JreConfig = JreConfig(),
     var splashScreen: SplashScreenConfig? = null
-)
+) {
+    fun log(block: LogConfig.() -> Unit) {
+        log = LogConfig().apply(block)
+    }
+    fun exe(block: ExeConfig.() -> Unit) {
+        exe = ExeConfig().apply(block)
+    }
+    fun jar(block: JarConfig.() -> Unit) {
+        jar = JarConfig().apply(block)
+    }
+    fun jre(block: JreConfig.() -> Unit) {
+        jre = JreConfig().apply(block)
+    }
+    fun splashScreen(block: SplashScreenConfig.() -> Unit) {
+        splashScreen = SplashScreenConfig().apply(block)
+    }
+
+
+}
 
 sealed interface ApplicationType {
     @Deprecated("maybe tomorrow you impl this~", ReplaceWith("Application"),DeprecationLevel.ERROR)
@@ -80,9 +98,9 @@ data class LauncherConfig(
 )
 
 data class JreConfig(
-    var search: Iterable<JvmSearch> = emptyList(),
-    var options: Iterable<String> = emptyList(),
-    var nativeLibs: Iterable<String> = emptyList(),
+    var search: MutableSet<JvmSearch> = mutableSetOf(),
+    var options: MutableSet<String> = mutableSetOf(),
+    var nativeLibsPath: MutableSet<String> = mutableSetOf(),
     var version: Set<Number> = emptySet(),
     val preferred: JrePreferred = JrePreferred.DefaultVM
 ) {
@@ -122,6 +140,7 @@ sealed interface JvmSearch {
 
 fun Project.jarToExe(configure: JarToExeConfig.() -> Unit) {
     val config = JarToExeConfig().apply(configure)
+
 
 
     // Plugin implementation goes here
