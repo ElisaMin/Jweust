@@ -1,5 +1,5 @@
 val libs = rootProject.libs
-@Suppress("")
+@Suppress("DSL_SCOPE_VIOLATION")
 plugins {
     `java-gradle-plugin`
     alias(libs.plugins.kotlin)

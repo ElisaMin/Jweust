@@ -13,6 +13,7 @@ data class JarToExeConfig(
     var exe: ExeConfig = ExeConfig(),
     var jar: JarConfig = JarConfig(),
     var jre: JreConfig = JreConfig(),
+    var charset: CharsetConfig = CharsetConfig(),
     var splashScreen: SplashScreenConfig? = null
 ) {
     fun log(block: LogConfig.() -> Unit) {
@@ -29,6 +30,9 @@ data class JarToExeConfig(
     }
     fun splashScreen(block: SplashScreenConfig.() -> Unit) {
         splashScreen = SplashScreenConfig().apply(block)
+    }
+    fun charset(block:CharsetConfig.() -> Unit) {
+        charset = CharsetConfig().apply(block)
     }
 
 
@@ -59,14 +63,18 @@ sealed interface ApplicationType {
 }
 
 data class LogConfig(
-    var error: LogFileConfig = LogFileConfig(),
-    var stdout: File? = null
+    var error: LogFileConfig? = null,
+    var stdout: LogFileConfig? = null
 )
 
 data class LogFileConfig(
-    val path: String = "error.log",
+    val path: String? = GENERATE_FILE,
     val isOverwrite: Boolean = false
-)
+) {
+    companion object {
+        val GENERATE_FILE = null
+    }
+}
 
 enum class Permissions {
     Default,
@@ -87,14 +95,14 @@ data class ExeConfig(
 )
 
 data class JarConfig(
-    var files: List<File> = emptyList(),
+    var files: Set<File> = emptySet(),
     var launcher: LauncherConfig? = null
 )
 
 data class LauncherConfig(
-    var file: File = File(""),
+    var file: File?=null,
     var mainClass: String? = null,
-    var args: Map<Int, String> = emptyMap()
+    var args: Map<Int, String>? = null,
 )
 
 data class JreConfig(
@@ -107,6 +115,19 @@ data class JreConfig(
     infix fun version(range: ClosedFloatingPointRange<Float>) {
         version = sequenceOf(1.6f,1.7f,1.8f,9f,10f,11f,12f,13f,14f,15f,16f,17f,18f,19f,20f,21f,22f,23f,24f)
             .filter { it in range }.toSet()
+    }
+}
+data class CharsetConfig(
+    var jvm:String? = null,
+    var stdout :String? = null,
+    var pageCode: String? = null
+) {
+    companion object {
+        val UTF8 = CharsetConfig(
+            jvm = "UTF-8",
+//            stdout = "UTF-8",
+            pageCode = "65001"
+        )
     }
 }
 
