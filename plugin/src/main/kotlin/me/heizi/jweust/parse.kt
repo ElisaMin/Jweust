@@ -4,49 +4,55 @@ import kotlin.reflect.*
 import kotlin.reflect.full.isSubclassOf
 import kotlin.reflect.full.memberProperties
 import kotlin.reflect.jvm.isAccessible
-import kotlin.system.exitProcess
 
 
 internal interface RustParsable {
     fun parsingValueExtra(name: String):(()->String)? {
         return null
     }
-    @Target(AnnotationTarget.PROPERTY,AnnotationTarget.CLASS)
+    @Target(AnnotationTarget.PROPERTY)
     annotation class Name(val name:String)
     @Target(AnnotationTarget.PROPERTY)
     annotation class Type(val type:String)
+    @Target(AnnotationTarget.CLASS)
     annotation class Prefix(val prefix:String)
+}
+private val KAnnotatedElement.parseName get() =
+    annotations.filterIsInstance<RustParsable.Name>().firstOrNull()?.name
+private val KAnnotatedElement.parsePrefix get() =
+    annotations.filterIsInstance<RustParsable.Prefix>().firstOrNull()?.prefix
+private val KAnnotatedElement.parseType get() =
+    annotations.filterIsInstance<RustParsable.Type>().firstOrNull()?.type
+private inline val RustParsable.self get() = this
+context(RustParsable)
+private fun KProperty1<out RustParsable,*>.parseRust(prefix: String?):String? = getter.call(self).let { value ->
+    if (value is RustParsable) return@let null else buildString {
+        append("pub const ")
+        //name
+        prefix?.let { append(it) }
+        append(parseName ?: name.toSnackCase().uppercase())
+        //type
+        append(':')
+        val extraType = parseType
+        append(extraType?: returnType.parseRust())
+        //sign
+        append(" = ")
+        //value
+        append(
+            if (extraType == null) value.parseRust(wrap = returnType.isMarkedNullable)
+            else parsingValueExtra(name)!!()
+        )
+        //end
+        append(';')
+    }
 }
 
 internal fun RustParsable.parse():String {
-    return this::class.memberProperties.joinToString("\n") { prop ->
-        prop.isAccessible = true
-        prop.run {
-            val (type:String, value:String?) = annotations
-                .filterIsInstance<RustParsable.Type>()
-                .firstOrNull()?.type?.let {
-                    it to parsingValueExtra(name)!!()
-                } ?:run {
-                    returnType.parseRust() to getter
-                        .call(this@parse)
-                        // ignore
-                        .takeIf { it !is RustParsable }
-                        ?.parseRust(
-                            wrap = returnType.isMarkedNullable
-                        )
-                }
-            if (value == null) return@joinToString ""
-            val name =  annotations.filterIsInstance<RustParsable.Name>().firstOrNull()?.name
-                ?: name.toSnackCase().uppercase().let {
-                    val prefix =
-                        this@parse::class.annotations.filterIsInstance<RustParsable.Name>().firstOrNull()?.name ?: ""
-                    prefix + it
-                }
-            val prefix = this@parse::class.annotations.filterIsInstance<RustParsable.Prefix>().firstOrNull()?.prefix ?: ""
-            isAccessible = false
-            "pub const $prefix$name:$type = $value;"
-        }
-    }
+    val prefix = this::class.parsePrefix
+    return this::class.memberProperties.mapNotNull {
+        it.isAccessible = true
+        it.parseRust(prefix)
+    }.joinToString("\n")
 }
 
 fun KClass<*>.toRustType(
@@ -68,7 +74,10 @@ fun KClass<*>.toRustType(
         Long::class -> "i64"
         Double::class -> "f64"
         Boolean::class -> "bool"
-        else -> "None"
+        else -> when {
+            isSubclassOf(JvmSearch::class) -> String::class.toRustType()
+            else -> "None"
+        }
     }
 }
 fun KType.parseRust(nullable:Boolean = isMarkedNullable):String  =

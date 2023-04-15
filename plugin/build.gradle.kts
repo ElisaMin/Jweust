@@ -12,7 +12,13 @@ allprojects {
     version = rootProject.libs.versions.jweust.get()
 }
 
-
+kotlin {
+    target.compilations.all {
+        kotlinOptions {
+            freeCompilerArgs += "-Xcontext-receivers"
+        }
+    }
+}
 testing {
     suites {
         // Configure the built-in test suite
