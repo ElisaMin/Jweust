@@ -3,6 +3,64 @@ package me.heizi.jweust
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
+class PluginsObjectParseTest {
+
+    @Test fun `parse default`() {
+        println(config.getRustFile())
+    }
+
+    companion object {
+        val config = JarToExeConfig().apply {
+            rustProjectName = "ProjectTest"
+            applicationType = ApplicationType.ConsoleWhileOptionApplication()
+            workdir = "."
+            log {
+                error = LogFileConfig(
+                    path = "error.log",
+                    isOverwrite = false,
+                )
+                stdout = null
+            }
+            exe {
+
+                permissions = Permissions.HighersInTheRoom
+                isInstance = true
+                arch = "arm64"
+                internalName = "test jweust"
+
+                icon = "Icon.ico"
+                fileDescription = "JavaWindowsExecutableRust"
+                fileVersion = "0"
+
+                productName = "test product"
+                productVersion = "1.0.0"
+
+                legalCopyright = "Jweust@Heizi"
+                companyName = "Heizi"
+
+            }
+
+            jar {
+                files = setOf("test.jar")
+            }
+            jre.search + JvmSearch.JvmDir("./jvm/")
+            jre.search + JvmSearch.JvmDir("./lib/runtime")
+            jre.search + JvmSearch.EnvVar("JAVA_HOME")
+            jre versions 19.0f .. Float.MAX_VALUE
+
+            charset {
+                jvm = "GBK"
+                stdout = "GBK"
+            }
+
+            splashScreen {
+                imagePath = "splash.png"
+            }
+        }
+
+    }
+}
+
 class RustParseTest {
     @Test fun `parse custom type, name, prefix `() {
         val expected = """
