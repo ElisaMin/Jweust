@@ -3,10 +3,23 @@ package me.heizi.jweust
 import org.gradle.api.Project
 import java.io.File
 
-val runLikeHandSonFire = NotImplementedError("Maybe tomorrow you impl this ~")
+//val runLikeHandSonFire = NotImplementedError("Maybe tomorrow you impl this ~")
 
 internal fun JarToExeConfig.getRustFile():String {
-    TODO()
+    return arrayOf<RustParsable>(
+        this,
+        log,
+        exe,
+        jar, jar.launcher ?: LauncherConfig(),
+        jre,
+        charset,
+        (splashScreen ?: SplashScreenConfig(null)),
+    )
+        .asSequence()
+        .map { it.parse() }
+        .flatMap { it.lines() }
+        .filter { it.isNotEmpty() }
+        .joinToString("\n")
 }
 data class JarToExeConfig(
 //    var includeJar: Boolean = false,
@@ -197,13 +210,29 @@ data class JreConfig(
     var options: MutableSet<String> = mutableSetOf(),
     @RustParsable.Name("NATIVE_LIBS")
     var nativeLibsPath: MutableSet<String> = mutableSetOf(),
+    @RustParsable.Type("&[&'static str]")
     var version: Set<Number> = emptySet(),
 //    val preferred: JrePreferred = JrePreferred.DefaultVM
 ):RustParsable {
-    infix fun version(range: ClosedFloatingPointRange<Float>) {
+    infix fun versions(range: ClosedFloatingPointRange<Float>) {
         version = sequenceOf(1.6f,1.7f,1.8f,9f,10f,11f,12f,13f,14f,15f,16f,17f,18f,19f,20f,21f,22f,23f,24f)
             .filter { it in range }.toSet()
     }
+
+    override fun parsingValueExtra(name: String): (() -> String)? {
+        if (name == "version") return {
+            version.map { when (it) {
+                is Double -> it.toInt()
+                is Float -> it.toInt()
+                else -> it
+            }.toString()
+            }.joinToString(",") {
+                "\"$it\""
+            }
+        }
+        return null
+    }
+
 }
 //pub const CHARSET_STDOUT:Option<&'static str> = Some("GBK");
 //pub const CHARSET_JVM:Option<&'static str> = None;
@@ -234,10 +263,9 @@ data class CharsetConfig(
 @RustParsable.Prefix("SPLASH_SCREEN_")
 data class SplashScreenConfig(
     var imagePath: String? = null,
-    var imageFile: String? = "",
 //    var startLine: SplashScreenText? = null,
 //    var versionLine: SplashScreenText? = null
-)
+):RustParsable
 
 //data class SplashScreenText(
 //    var text: String = "",
