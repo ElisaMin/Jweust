@@ -22,6 +22,20 @@ internal fun RustParsable.parse():String {
     return this::class.memberProperties.joinToString("\n") { prop ->
         prop.isAccessible = true
         prop.run {
+            val (type:String, value:String?) = annotations
+                .filterIsInstance<RustParsable.Type>()
+                .firstOrNull()?.type?.let {
+                    it to parsingValueExtra(name)!!()
+                } ?:run {
+                    returnType.parseRust() to getter
+                        .call(this@parse)
+                        // ignore
+                        .takeIf { it !is RustParsable }
+                        ?.parseRust(
+                            wrap = returnType.isMarkedNullable
+                        )
+                }
+            if (value == null) return@joinToString ""
             val name =  annotations.filterIsInstance<RustParsable.Name>().firstOrNull()?.name
                 ?: name.toSnackCase().uppercase().let {
                     val prefix =
@@ -29,11 +43,6 @@ internal fun RustParsable.parse():String {
                     prefix + it
                 }
             val prefix = this@parse::class.annotations.filterIsInstance<RustParsable.Prefix>().firstOrNull()?.prefix ?: ""
-            val (type:String, value:String) = annotations.filterIsInstance<RustParsable.Type>().firstOrNull()?.type?.let {
-                it to parsingValueExtra(name)!!()
-            } ?: run {
-                returnType.parseRust() to getter.call(this@parse).parseRust(wrap = returnType.isMarkedNullable)
-            }
             isAccessible = false
             "pub const $prefix$name:$type = $value;"
         }
@@ -90,6 +99,10 @@ fun Any?.parseRust(wrap: Boolean = false):String {
             joinToString { it.parseRust() }.let {
                 "&[$it]"
             }
+        }
+        is JvmSearch -> when(this) {
+            is JvmSearch.EnvVar -> name.parseRust()
+            is JvmSearch.JvmDir -> path.parseRust()
         }
         else -> "None"
     }
