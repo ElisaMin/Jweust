@@ -10,7 +10,7 @@ class PluginsObjectParseTest {
     }
 
     companion object {
-        val config = JarToExeConfig().apply {
+        val config = JweustConfig().apply {
             rustProjectName = "ProjectTest"
             applicationType = ApplicationType.ConsoleWhileOptionApplication()
             workdir = "."

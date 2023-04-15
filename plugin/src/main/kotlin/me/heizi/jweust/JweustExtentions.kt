@@ -1,11 +1,11 @@
 package me.heizi.jweust
 
+import org.gradle.api.Action
 import org.gradle.api.Project
-import java.io.File
 
 //val runLikeHandSonFire = NotImplementedError("Maybe tomorrow you impl this ~")
 
-internal fun JarToExeConfig.getRustFile():String {
+internal fun JweustConfig.getRustFile():String {
     return arrayOf<RustParsable>(
         this,
         log,
@@ -21,7 +21,38 @@ internal fun JarToExeConfig.getRustFile():String {
         .filter { it.isNotEmpty() }
         .joinToString("\n")
 }
-data class JarToExeConfig(
+internal val Project.Jweust get() = JweustConfig().apply {
+    rustProjectName = name
+    exe {
+        group.toString().let { owner ->
+            companyName = owner
+            legalCopyright = owner
+        }
+        version.toString().let {version->
+            fileVersion = version
+            productVersion = version
+        }
+        name.let {
+            productName = it
+            internalName = it
+        }
+
+        fileDescription = description?:""
+    }
+    jar {
+        fun foundByOutputFiles(name:String) =
+        tasks.findByName(name)
+            ?.outputs?.files?.firstOrNull()
+            ?.let { files = setOf(it.name) }
+        foundByOutputFiles("shadowJar") ?:
+        foundByOutputFiles("jar")
+        Runtime.version().let {
+            jre.version += it.feature()
+        }
+    }
+
+}
+data class JweustConfig(
 //    var includeJar: Boolean = false,
     var rustProjectName:String = "",
     // pub const APPLICATION_WITH_OUT_CLI:Option<Option<&'static str>> = Some(Some("-DConsolog=true"));
@@ -221,10 +252,10 @@ data class JreConfig(
 
     override fun parsingValueExtra(name: String): (() -> String)? {
         if (name == "version") return {
-            version.map { when (it) {
-                is Double -> it.toInt()
-                is Float -> it.toInt()
-                else -> it
+            version.map { f -> when (f) {
+                is Double -> f.toInt().takeIf { it>2 } ?:f
+                is Float -> f.toInt().takeIf { it>2 } ?:f
+                else -> f
             }.toString()
             }.joinToString(",") {
                 "\"$it\""
@@ -281,10 +312,11 @@ sealed interface JvmSearch {
 
 
 
+
 // Define the DSL implementation function
 
-fun Project.jarToExe(configure: JarToExeConfig.() -> Unit) {
-    val config = JarToExeConfig().apply(configure)
+fun Project.jarToExe(configure: JweustConfig.() -> Unit) {
+    val config = Jweust.apply(configure)
 
 
 
