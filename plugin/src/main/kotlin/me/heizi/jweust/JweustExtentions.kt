@@ -5,10 +5,16 @@ import java.io.File
 
 val runLikeHandSonFire = NotImplementedError("Maybe tomorrow you impl this ~")
 
+internal fun JarToExeConfig.getRustFile():String {
+    TODO()
+}
 data class JarToExeConfig(
 //    var includeJar: Boolean = false,
     var rustProjectName:String = "",
-    var applicationType: ApplicationType = ApplicationType.Application(),
+    // pub const APPLICATION_WITH_OUT_CLI:Option<Option<&'static str>> = Some(Some("-DConsolog=true"));
+    @RustParsable.Name("APPLICATION_WITH_OUT_CLI")
+    @RustParsable.Type("Option<Option<&'static str>>")
+    var applicationType: ApplicationType = ApplicationType.ConsoleWhileOptionApplication(),
     var workdir: String = "",
     var log: LogConfig = LogConfig(),
     var exe: ExeConfig = ExeConfig(),
@@ -16,7 +22,7 @@ data class JarToExeConfig(
     var jre: JreConfig = JreConfig(),
     var charset: CharsetConfig = CharsetConfig(),
     var splashScreen: SplashScreenConfig? = null
-) {
+):RustParsable {
     fun log(block: LogConfig.() -> Unit) {
         log = LogConfig().apply(block)
     }
@@ -36,31 +42,34 @@ data class JarToExeConfig(
         charset = CharsetConfig().apply(block)
     }
 
-
-}
-
-sealed interface ApplicationType {
-    @Deprecated("maybe tomorrow you impl this~", ReplaceWith("Application"),DeprecationLevel.ERROR)
-    object Console : ApplicationType
-
-    data class Application(
-        val enableConsoleArg:String?=null
-    ) : ApplicationType {
-        init {
-            require(
-                enableConsoleArg==null
-            ) {
-                runLikeHandSonFire
+    override fun parsingValueExtra(name: String): (() -> String)? {
+        if (name == "applicationType") return {
+            when (val t = applicationType) {
+                is ApplicationType.Console -> "None"
+                is ApplicationType.Application -> "Some(None)"
+                is ApplicationType.ConsoleWhileOptionApplication ->
+                    "Some(Some(\"${t.whileCommand}\"))"
             }
         }
+        return super.parsingValueExtra(name)
     }
-    @Deprecated("maybe tomorrow you impl this~", ReplaceWith("Application"),DeprecationLevel.ERROR)
-    class Service private constructor() : ApplicationType {
-        init {
-            throw NotImplementedError("Maybe tomorrow you impl this ~")
-        }
+}
 
-    }
+
+sealed interface ApplicationType {
+    object Console:ApplicationType
+    object Application:ApplicationType
+    class ConsoleWhileOptionApplication(
+        val whileCommand: String = "-DConsole=true"
+    ):ApplicationType
+
+//    @Deprecated("maybe tomorrow you impl this~", ReplaceWith("Application"),DeprecationLevel.ERROR)
+//    class Service private constructor() : ApplicationType {
+//        init {
+//            throw NotImplementedError("Maybe tomorrow you impl this ~")
+//        }
+//
+//    }
 }
 //pub const LOG_STDERR_PATH:Option<(Option<&'static str>,bool)> = None;
 //pub const LOG_STDOUT_PATH:Option<(Option<&'static str>,bool)> = None;
