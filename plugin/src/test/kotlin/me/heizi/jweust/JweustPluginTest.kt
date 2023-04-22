@@ -4,7 +4,6 @@ import com.github.javaparser.utils.Utils.assertNotNull
 import org.gradle.testfixtures.ProjectBuilder
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertSame
 
 /**
  * A simple unit test for the 'me.heizi.jweust.greeting' plugin.
@@ -23,9 +22,24 @@ class JweustPluginTest {
     @Test fun `plugin registers config`() {
         val projectName = "test-by-gradle"
         project.Jweust {
+            jweustRoot = project.buildDir.resolve("../../jweust")
             rustProjectName = projectName
         }
-        assertSame(projectName,project.tasks.withType(JweustTask::class.java).first().rustProjectName)
-
+        assertEquals(projectName,project.tasks.withType(JweustTask::class.java).first().rustProjectName)
     }
+    private val task by lazy {
+        project.tasks.withType(JweustTask::class.java).first()
+    }
+
+    @Test fun `jweust tasks`() {
+        task.clone().apply {
+            println(this)
+            task.jweustRoot.listFiles()!!
+                .takeIf { it.isNotEmpty() }!!
+                .forEach(::println)
+        }
+        task.parse()
+        task.build()
+    }
+
 }

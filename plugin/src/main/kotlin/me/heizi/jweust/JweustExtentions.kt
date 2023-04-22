@@ -1,56 +1,5 @@
 package me.heizi.jweust
 
-
-import org.gradle.api.Project
-
-
-internal fun JweustConfig.getRustFile():String {
-    return arrayOf(
-        this,
-        log,
-        exe,
-        jar, jar.launcher ?: LauncherConfig(),
-        jre,
-        charset,
-        (splashScreen ?: SplashScreenConfig(null)),
-    )
-        .asSequence()
-        .map { it.parse() }
-        .flatMap { it.lines() }
-        .filter { it.isNotEmpty() }
-        .joinToString("\n")
-}
-internal val Project.Jweust get() = JweustConfig().apply {
-    rustProjectName = name
-    exe {
-        group.toString().let { owner ->
-            companyName = owner
-            legalCopyright = owner
-        }
-        version.toString().let {version->
-            fileVersion = version
-            productVersion = version
-        }
-        name.let {
-            productName = it
-            internalName = it
-        }
-
-        fileDescription = description?:""
-    }
-    jar {
-        fun foundByOutputFiles(name:String) =
-        tasks.findByName(name)
-            ?.outputs?.files?.firstOrNull()
-            ?.let { files = setOf(it.name) }
-        foundByOutputFiles("shadowJar") ?:
-        foundByOutputFiles("jar")
-        Runtime.version().let {
-            jre.version += it.feature()
-        }
-    }
-
-}
 data class JweustConfig(
 //    var includeJar: Boolean = false,
     override var rustProjectName:String = "",

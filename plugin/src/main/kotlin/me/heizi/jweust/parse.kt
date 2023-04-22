@@ -1,12 +1,29 @@
 package me.heizi.jweust
 
+import java.io.Serializable
 import kotlin.reflect.*
 import kotlin.reflect.full.isSubclassOf
 import kotlin.reflect.full.memberProperties
 import kotlin.reflect.jvm.isAccessible
+internal fun JweustConfig.getRustFile():String {
+    return arrayOf(
+        this,
+        log,
+        exe,
+        jar, jar.launcher ?: LauncherConfig(),
+        jre,
+        charset,
+        (splashScreen ?: SplashScreenConfig(null)),
+    )
+        .asSequence()
+        .map { it.parse() }
+        .flatMap { it.lines() }
+        .filter { it.isNotEmpty() }
+        .joinToString("\n")
+}
 
 
-internal interface RustParsable {
+internal interface RustParsable:Serializable {
     fun parsingValueExtra(name: String):(()->String)? {
         return null
     }
