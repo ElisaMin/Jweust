@@ -1,63 +1,67 @@
-val libs = rootProject.libs
-@Suppress("DSL_SCOPE_VIOLATION")
+@file:Suppress("UnstableApiUsage")
+
 plugins {
     `java-gradle-plugin`
     alias(libs.plugins.kotlin)
 }
-allprojects {
-    repositories {
-        mavenCentral()
-    }
-    group = "me.heizi.gradle.plugins"
-    version = rootProject.libs.versions.jweust.get()
-}
 
+group = "me.heizi.gradle.plugins"
+version = rootProject.libs.versions.jweust.get()
+
+repositories {
+    mavenCentral {
+        url = uri("https://maven-central.storage-download.googleapis.com/maven2/")
+    }
+    maven {
+        url = uri("https://raw.githubusercontent.com/ElisaMin/Maven/master/")
+    }
+}
+dependencies {
+    runtimeOnly("org.slf4j:slf4j-log4j12:+")
+    implementation("me.heizi.kotlinx:khell:0.0.1-alpha02")
+    implementation("me.heizi.kotlinx:khell-api:0.0.1-alpha02")
+}
 kotlin {
-    target.compilations.all {
-        kotlinOptions {
-            freeCompilerArgs += "-Xcontext-receivers"
+    jvmToolchain(19)
+    target {
+        compilations.all {
+            kotlinOptions {
+                freeCompilerArgs += "-Xcontext-receivers"
+            }
         }
     }
 }
 testing {
     suites {
-        // Configure the built-in test suite
         val test by getting(JvmTestSuite::class) {
-            // Use Kotlin Test test framework
             useKotlinTest()
         }
-
-        // Create a new test suite
-        val functionalTest by registering(JvmTestSuite::class) {
-            // Use Kotlin Test test framework
+        create<JvmTestSuite>("functionalTest") {
             useKotlinTest()
-
             dependencies {
-                // functionalTest test suite depends on the production code in tests
                 implementation(project())
             }
-
             targets {
                 all {
-                    // This test suite should run after the built-in test suite has run its tests
-                    testTask.configure { shouldRunAfter(test) } 
+                    testTask.configure { shouldRunAfter(test) }
                 }
             }
         }
     }
 }
-
+//
 gradlePlugin {
-    // Define the plugin
-    val greeting by plugins.creating {
-        id = "me.heizi.jweust.greeting"
-        implementationClass = "me.heizi.jweust.JweustPlugin"
+    plugins {
+        create("jweust") {
+            id = "me.heizi.jweust"
+            implementationClass = "me.heizi.jweust.JweustPlugin"
+        }
     }
 }
 
 gradlePlugin.testSourceSets(sourceSets["functionalTest"])
-
-tasks.named<Task>("check") {
-    // Include functionalTest as part of the check lifecycle
-    dependsOn(testing.suites.named("functionalTest"))
-}
+//
+//tasks.named<Task>("check") {
+//    // Include functionalTest as part of the check lifecycle
+//    dependsOn(testing.suites.named("functionalTest"))
+//}
