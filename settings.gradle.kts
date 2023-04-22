@@ -10,4 +10,3 @@
 
 rootProject.name = "Jweust"
 include("plugin")
-include("demo")
