@@ -1,12 +1,11 @@
 package me.heizi.jweust
 
-import org.gradle.api.Action
+
 import org.gradle.api.Project
 
-//val runLikeHandSonFire = NotImplementedError("Maybe tomorrow you impl this ~")
 
 internal fun JweustConfig.getRustFile():String {
-    return arrayOf<RustParsable>(
+    return arrayOf(
         this,
         log,
         exe,
@@ -54,38 +53,19 @@ internal val Project.Jweust get() = JweustConfig().apply {
 }
 data class JweustConfig(
 //    var includeJar: Boolean = false,
-    var rustProjectName:String = "",
+    override var rustProjectName:String = "",
     // pub const APPLICATION_WITH_OUT_CLI:Option<Option<&'static str>> = Some(Some("-DConsolog=true"));
     @RustParsable.Name("APPLICATION_WITH_OUT_CLI")
     @RustParsable.Type("Option<Option<&'static str>>")
-    var applicationType: ApplicationType = ApplicationType.ConsoleWhileOptionApplication(),
-    var workdir: String = "",
-    var log: LogConfig = LogConfig(),
-    var exe: ExeConfig = ExeConfig(),
-    var jar: JarConfig = JarConfig(),
-    var jre: JreConfig = JreConfig(),
-    var charset: CharsetConfig = CharsetConfig(),
-    var splashScreen: SplashScreenConfig? = null
-):RustParsable {
-    fun log(block: LogConfig.() -> Unit) {
-        log = LogConfig().apply(block)
-    }
-    fun exe(block: ExeConfig.() -> Unit) {
-        exe = ExeConfig().apply(block)
-    }
-    fun jar(block: JarConfig.() -> Unit) {
-        jar = JarConfig().apply(block)
-    }
-    fun jre(block: JreConfig.() -> Unit) {
-        jre = JreConfig().apply(block)
-    }
-    fun splashScreen(block: SplashScreenConfig.() -> Unit) {
-        splashScreen = SplashScreenConfig().apply(block)
-    }
-    fun charset(block:CharsetConfig.() -> Unit) {
-        charset = CharsetConfig().apply(block)
-    }
-
+    override var applicationType: ApplicationType = ApplicationType.ConsoleWhileOptionApplication(),
+    override var workdir: String = "",
+    override var log: LogConfig = LogConfig(),
+    override var exe: ExeConfig = ExeConfig(),
+    override var jar: JarConfig = JarConfig(),
+    override var jre: JreConfig = JreConfig(),
+    override var charset: CharsetConfig = CharsetConfig(),
+    override var splashScreen: SplashScreenConfig? = null
+):RustParsable,JweustVarsExtension {
     override fun parsingValueExtra(name: String): (() -> String)? {
         if (name == "applicationType") return {
             when (val t = applicationType) {
@@ -107,13 +87,6 @@ sealed interface ApplicationType {
         val whileCommand: String = "-DConsole=true"
     ):ApplicationType
 
-//    @Deprecated("maybe tomorrow you impl this~", ReplaceWith("Application"),DeprecationLevel.ERROR)
-//    class Service private constructor() : ApplicationType {
-//        init {
-//            throw NotImplementedError("Maybe tomorrow you impl this ~")
-//        }
-//
-//    }
 }
 //pub const LOG_STDERR_PATH:Option<(Option<&'static str>,bool)> = None;
 //pub const LOG_STDOUT_PATH:Option<(Option<&'static str>,bool)> = None;
@@ -310,15 +283,3 @@ sealed interface JvmSearch {
     data class EnvVar(val name: String):JvmSearch
 }
 
-
-
-
-// Define the DSL implementation function
-
-fun Project.jarToExe(configure: JweustConfig.() -> Unit) {
-    val config = Jweust.apply(configure)
-
-
-
-    // Plugin implementation goes here
-}
