@@ -9,13 +9,17 @@ import java.io.File
 
 class JweustPlugin: Plugin<Project> {
     override fun apply(project: Project) { with(project) {
-        extensions.add(JweustExtension::class.java,"jweust",JweustExtension(this))
+        configurations.create(EXTENSION_NAME)
+        extensions.add(JweustExtension::class.java, EXTENSION_NAME,JweustExtension(this))
         tasks.register(
             JweustTask.NAME,
             JweustTask::class.java,
             extensions.getByType(JweustExtension::class.java)
         )
     } }
+    companion object {
+        const val EXTENSION_NAME = "jweust"
+    }
 }
 private val Project.jweustConfig get() = JweustConfig().apply {
     rustProjectName = name.toSnackCase()

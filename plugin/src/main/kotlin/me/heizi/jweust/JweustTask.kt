@@ -4,14 +4,21 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.runBlocking
 import me.heizi.kotlinx.shell.*
 import org.gradle.api.DefaultTask
+import org.gradle.api.Task
+import java.io.File
 import java.io.FileWriter
 import java.io.IOException
 import javax.inject.Inject
 
-
+@Suppress("LeakingThis")
 open class JweustTask @Inject constructor (
     extension: JweustExtension
 ): DefaultTask(),JweustExtension by extension {
+    private fun Task.save(vararg files: File, property: String?=null) {
+        this.outputs.file(files.clone()).run {
+            if (property!=null) withPropertyName("jweust.$property")
+        }
+    }
     companion object {
         const val NAME = "jweust"
         private const val FILE_WITH_DIR = "src/var.rs"
@@ -26,13 +33,13 @@ open class JweustTask @Inject constructor (
         jweustRoot.deleteOnExit()
         return null
     }
-    internal fun clone(): CommandResult? = runBlocking {
+    internal fun clone():CommandResult?  {
         val reasonNotToClone = cloneBefore()
-        if (reasonNotToClone!=null) {
+        return if (reasonNotToClone!=null) {
             logger.warn(reasonNotToClone)
-            return@runBlocking null
-        } else {
-            return@runBlocking Shell(
+            null
+        } else runBlocking {
+            Shell(
                 "git clone git@github.com:ElisaMin/Jweust-template.git ${jweustRoot.absolutePath}"
             ).await().apply {
                 require(this is CommandResult.Success) {
@@ -41,15 +48,16 @@ open class JweustTask @Inject constructor (
                             |${it.errorMessage}
                             |${it.code}
                         """.trimMargin()
-
                     }.let { IOException(it) }
                 }
-                outputs.files(jweustRoot.listFiles())
-                    .withPropertyName("jweust.rust.files")
             }
         }
     }
-    internal fun parse() = jweustRoot.absoluteFile.resolve(FILE_WITH_DIR,).run {
+
+    private inline val config get() = JweustConfig(rustProjectName,applicationType,workdir, log,exe,jar,jre,charset,splashScreen)
+    private inline val rustConfig get() = config.getRustFile()
+
+    internal fun parse() = jweustRoot.absoluteFile.resolve(FILE_WITH_DIR).run {
         FileWriter(this,false).use {
             it.write(rustConfig)
             it.flush()
@@ -58,18 +66,39 @@ open class JweustTask @Inject constructor (
         require(parsed.lines().size>29) {
             "is not valid rust config\n$parsed"
         }
-        outputs.file(this)
-            .withPropertyName("jweust.rust.config")
-        return@run parsed
+        return@run parsed to arrayOf(this,parseAfter())
     }
-    private val config get() = JweustConfig(
-        rustProjectName,applicationType,workdir,
-        log,exe,jar,jre,charset,splashScreen
-    )
 
-    private val rustConfig
-        get() = config.getRustFile()
-
+    // replace the version and name in cargo.toml
+    private fun parseAfter() = jweustRoot.resolve("cargo.toml").apply {
+        val o = readText().lines()
+        val (name,version) = o.run {
+            lineDiff(1,"name",rustProjectName) to lineDiff(2,"version",exe.productVersion.split('.').run {
+                when {
+                    last()=="0" -> dropLast(1)
+                    first()=="0" -> drop(1)
+                    else -> dropLast(1)
+                }
+            }.joinToString("."))
+        }
+        if (name!=null || version!=null ) o.toMutableList().apply {
+            name?.let { this[1] = it }
+            version?.let { this[2] = it }
+        }.joinToString("\n").let { s->
+            FileWriter(this,false).use {
+                it.write(s)
+                it.flush()
+            }
+        }
+    }
+    @Suppress("NOTHING_TO_INLINE")
+    private inline fun List<String>.lineDiff(index: Int, name: String, to:String): String? {
+        val regex = Regex("$name = \"(.+)\"")
+        val oLine = this[index]
+        return this[index].replace(regex){
+            "$name = \"$to\""
+        }.takeIf { it!=oLine }
+    }
 
     @OptIn(ExperimentalApiReShell::class)
     internal fun build() = runBlocking {
@@ -97,18 +126,57 @@ open class JweustTask @Inject constructor (
 
                 }.let { IOException(it) }
             }
+        } as CommandResult.Success // as success
+    } to afterBuild()
+    // exe in /target/release/deps/${rustProjectName}.exe
+    internal fun afterBuild() = jweustRoot.resolve(
+        "target/release/deps/"
+    ).let { dir->
+        require(dir.exists()&&dir.isDirectory) { "build failed" }
+        dir.resolve("$rustProjectName.exe").takeIf { it.exists() } ?:
+        dir.listFiles()?.first { it.name.endsWith(".exe") }
+            ?: throw IllegalStateException("exe not found")
+    }.apply {
+        require(exists()&&isFile) {
+            "$this is not a file"
+        }
+        val exe = this
+        project.buildDir.resolve("jweust/").run {
+            mkdirs()
+            require(exists() && isDirectory) {
+                "$this is not a directory"
+            }
+            exe.copyTo(this.resolve(exe.name),true).run {
+                println("copy to $this")
+                require(exists()&&isFile) {
+                    "$this is not a file"
+                }
+            }
+        }
+        project.artifacts.add(JweustPlugin.EXTENSION_NAME,exe) {
+            it.type = "exe"
         }
     }
+
+
     init {
         group = "jweust"
         doFirst("clone") {
-            clone()
+            clone()?.let {_->
+                it.save(*jweustRoot.listFiles()!!.filter { file ->
+                    val fileName = file.name
+                    arrayOf(".git","cargo.toml") // exclude
+                        .none { it == fileName }
+                }.toTypedArray(),property = "rust.files")
+            }
         }
         doLast("parse") {
-            parse()
+            val (_,file) = parse()
+            it.save(*file,property = "rust.config")
         }
         doLast("build") {
-            build()
+            val (_,file) = build()
+            it.save(file,property = "rust.exe")
         }
     }
 

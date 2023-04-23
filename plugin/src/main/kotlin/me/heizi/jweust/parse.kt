@@ -6,8 +6,21 @@ import kotlin.reflect.full.isSubclassOf
 import kotlin.reflect.full.memberProperties
 import kotlin.reflect.jvm.isAccessible
 
+
+internal fun String.createValidatedVersionOf(len:Int):String = buildString {
+    val r = this@createValidatedVersionOf.split(".").map { it.toIntOrNull()?.toString()?:"0" }
+    repeat(len) {
+        if (it!=0) append('.')
+        append(r.getOrNull(it) ?: "0")
+    }
+}
 internal fun JweustConfig.getRustFile():String {
     workdir = workdir?.takeIf { it.isNotBlank() }
+    exe {
+        productVersion = productVersion.createValidatedVersionOf(4)
+        fileVersion = fileVersion.createValidatedVersionOf(4)
+    }
+
     return arrayOf(
         this,
         log,

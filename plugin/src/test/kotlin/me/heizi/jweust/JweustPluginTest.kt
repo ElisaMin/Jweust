@@ -13,6 +13,9 @@ class JweustPluginTest {
     // Create a test project and apply the plugin
     private val project by lazy { ProjectBuilder.builder().build().also {
         it.plugins.apply("me.heizi.jweust")
+        it.Jweust {
+            jweustRoot = it.buildDir.resolve("../../jweust")
+        }
     } }
 
     @Test fun `plugin registers task`() {
@@ -22,7 +25,7 @@ class JweustPluginTest {
     @Test fun `plugin registers config`() {
         val projectName = "test-by-gradle"
         project.Jweust {
-            jweustRoot = project.buildDir.resolve("../../jweust")
+
             rustProjectName = projectName
         }
         assertEquals(projectName,project.tasks.withType(JweustTask::class.java).first().rustProjectName)
@@ -32,12 +35,7 @@ class JweustPluginTest {
     }
 
     @Test fun `jweust tasks`() {
-        task.clone().apply {
-            println(this)
-            task.jweustRoot.listFiles()!!
-                .takeIf { it.isNotEmpty() }!!
-                .forEach(::println)
-        }
+        task.clone()
         task.parse()
         task.build()
     }
