@@ -1,7 +1,7 @@
 @file:Suppress("UnstableApiUsage")
 
 plugins {
-    `java-gradle-plugin`
+    `kotlin-dsl`
     alias(libs.plugins.kotlin)
 }
 

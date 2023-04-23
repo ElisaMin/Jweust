@@ -154,7 +154,7 @@ open class JweustTask @Inject constructor (
             }
         }
         project.artifacts.add(JweustPlugin.EXTENSION_NAME,exe) {
-            it.type = "exe"
+            type = "exe"
         }
     }
 
@@ -163,7 +163,7 @@ open class JweustTask @Inject constructor (
         group = "jweust"
         doFirst("clone") {
             clone()?.let {_->
-                it.save(*jweustRoot.listFiles()!!.filter { file ->
+                save(*jweustRoot.listFiles()!!.filter { file ->
                     val fileName = file.name
                     arrayOf(".git","cargo.toml") // exclude
                         .none { it == fileName }
@@ -172,11 +172,11 @@ open class JweustTask @Inject constructor (
         }
         doLast("parse") {
             val (_,file) = parse()
-            it.save(*file,property = "rust.config")
+            save(*file,property = "rust.config")
         }
         doLast("build") {
             val (_,file) = build()
-            it.save(file,property = "rust.exe")
+            save(file,property = "rust.exe")
         }
     }
 

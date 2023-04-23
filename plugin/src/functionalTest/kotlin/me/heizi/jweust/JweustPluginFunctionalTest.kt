@@ -17,15 +17,15 @@ class JweustPluginFunctionalTest {
     @field:TempDir
     lateinit var projectDir: File
 
-    private val buildFile by lazy { projectDir.resolve("build.gradle") }
-    private val settingsFile by lazy { projectDir.resolve("settings.gradle") }
+    private val buildFile by lazy { projectDir.resolve("build.gradle.kts") }
+    private val settingsFile by lazy { projectDir.resolve("settings.gradle.kts") }
 
     @Test fun `can run task`() {
         // Set up the test build
         settingsFile.writeText("")
         buildFile.writeText("""
             plugins {
-                id('me.heizi.jweust.greeting')
+                id("me.heizi.jweust")
             }
         """.trimIndent())
 
