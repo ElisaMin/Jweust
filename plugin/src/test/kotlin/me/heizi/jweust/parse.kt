@@ -9,6 +9,12 @@ class PluginsObjectParseTest {
         println(config.getRustFile())
     }
 
+    @Test fun `parse jar`() {
+        val jar = config.jar
+        println(jar.parsePartOfFile()+"\n"+(jar.launcher?:LauncherConfig()).parsePartOfFile())
+    }
+
+
     companion object {
         val config = JweustConfig().apply {
             rustProjectName = "ProjectTest"
@@ -43,9 +49,9 @@ class PluginsObjectParseTest {
             jar {
                 files = setOf("test.jar")
             }
-            jre.search + JvmSearch.JvmDir("./jvm/")
-            jre.search + JvmSearch.JvmDir("./lib/runtime")
-            jre.search + JvmSearch.EnvVar("JAVA_HOME")
+            jre.search += JvmSearch.JvmDir("./jvm/")
+            jre.search += JvmSearch.JvmDir("./lib/runtime")
+            jre.search += JvmSearch.EnvVar("JAVA_HOME")
             jre versions 19.0f .. Float.MAX_VALUE
 
             charset {
@@ -67,7 +73,7 @@ class RustParseTest {
             pub const PRE_HELLO_WORLD:Option<(&'static str, &'static str)> = Some(("hello","world"));
         """.trimIndent()
 //        println("e:| $expected")
-        val actual = HelloWorld().parse()
+        val actual = HelloWorld().parsePartOfFile()
 //        println("a:| $actual")
         assertEquals(expected,actual)
 //        assertSame(expected,actual)
@@ -81,7 +87,7 @@ class RustParseTest {
             val varAN: String? = null
             val varAS: String? = "var"
         }
-        val actual = testing.parse()
+        val actual = testing.parsePartOfFile()
         assertEquals(expected,actual)
     }
     @Test fun `parse array or iterable`() {
@@ -97,7 +103,7 @@ class RustParseTest {
             val lists: List<String> = listOf("1","2","3")
             val iterables: Iterable<String> = Iterable { arrays.iterator() }
         }
-        val actual = testing.parse()
+        val actual = testing.parsePartOfFile()
         assertEquals(expected,actual)
     }
     @Test fun `parse map`() {
@@ -107,11 +113,11 @@ class RustParseTest {
         val testing = object :RustParsable {
             val maps: Map<Int,Boolean> = mapOf(1 to true, 2 to false)
         }
-        val actual = testing.parse()
+        val actual = testing.parsePartOfFile()
         assertEquals(expected,actual)
     }
     @Test fun `parse pan test`() {
-        println(PanTest().parse())
+        println(PanTest().parsePartOfFile())
     }
 }
 @Suppress("unused")

@@ -1,3 +1,4 @@
+@file:Suppress("unused")
 package me.heizi.jweust
 
 data class JweustConfig(
@@ -7,13 +8,13 @@ data class JweustConfig(
     @RustParsable.Name("APPLICATION_WITH_OUT_CLI")
     @RustParsable.Type("Option<Option<&'static str>>")
     override var applicationType: ApplicationType = ApplicationType.ConsoleWhileOptionApplication(),
-    override var workdir: String = "",
+    override var workdir: String? = null,
     override var log: LogConfig = LogConfig(),
     override var exe: ExeConfig = ExeConfig(),
     override var jar: JarConfig = JarConfig(),
     override var jre: JreConfig = JreConfig(),
     override var charset: CharsetConfig = CharsetConfig(),
-    override var splashScreen: SplashScreenConfig? = null
+    override var splashScreen: SplashScreenConfig? = SplashScreenConfig(),
 ):RustParsable,JweustVarsExtension {
     override fun parsingValueExtra(name: String): (() -> String)? {
         if (name == "applicationType") return {
@@ -96,7 +97,11 @@ data class ExeConfig(
     var isInstance: Boolean = true,
     var arch: String = "x86_64",
     @RustParsable.Type("i8")
+    //EXE_PERMISSION
+    @RustParsable.Name("PERMISSION")
     var permissions: Permissions = Permissions.Default,
+    //EXE_ICON_PATH
+    @RustParsable.Name("ICON_PATH")
     var icon: String? = null,
     var fileVersion: String = "",
     var productVersion: String = "",
@@ -131,10 +136,16 @@ data class JarConfig(
 //pub const JAR_LAUNCHER_ARGS:&[(i32,&str)] = &[];
 @RustParsable.Prefix("JAR_LAUNCHER_")
 data class LauncherConfig(
-    var file: String?=null,
+    @RustParsable.Type("usize")
+    var file: Int = 0,
     var mainClass: String? = null,
     var args: Map<Int, String> = emptyMap(),
-):RustParsable
+):RustParsable {
+    override fun parsingValueExtra(name: String): (() -> String)?
+        = if (name == "file") { {
+            file.toString()
+        } } else null
+}
 
 //pub const JRE_SEARCH_DIR:&[&str] = &["./lib/runtime"];
 //pub const JRE_SEARCH_ENV:&[&str] = &["JAVA_HOME"];
@@ -179,7 +190,7 @@ data class JreConfig(
                 is Float -> f.toInt().takeIf { it>2 } ?:f
                 else -> f
             }.toString()
-            }.joinToString(",") {
+            }.joinToString(",", "&[", "]" ) {
                 "\"$it\""
             }
         }
@@ -216,17 +227,8 @@ data class CharsetConfig(
 @RustParsable.Prefix("SPLASH_SCREEN_")
 data class SplashScreenConfig(
     var imagePath: String? = null,
-//    var startLine: SplashScreenText? = null,
-//    var versionLine: SplashScreenText? = null
 ):RustParsable
 
-//data class SplashScreenText(
-//    var text: String = "",
-//    var fontName: String = "SansSerif",
-//    var fontSize: Int = 12,
-//    var fontStyle: Int = 0,
-//    var color: Int = -1
-//)
 sealed interface JvmSearch {
     data class JvmDir(val path: String):JvmSearch
     data class EnvVar(val name: String):JvmSearch

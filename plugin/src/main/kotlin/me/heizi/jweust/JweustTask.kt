@@ -56,7 +56,7 @@ open class JweustTask @Inject constructor (
         }
         val parsed = readText()
         require(parsed.lines().size>29) {
-            "is not valid rust config"
+            "is not valid rust config\n$parsed"
         }
         outputs.file(this)
             .withPropertyName("jweust.rust.config")
@@ -73,16 +73,31 @@ open class JweustTask @Inject constructor (
 
     @OptIn(ExperimentalApiReShell::class)
     internal fun build() = runBlocking {
-        ReShell("cargo build --release", workdir = jweustRoot)
-            .map { it.also {
-                when(it) {
-                    is Signal.Output -> logger.info(it.message)
-                    is Signal.Error -> logger.error(it.message)
-                    is Signal.Code -> logger.info("Exit code: ${it.code}")
-                    else -> Unit
-                }
-            } }
-            .await()
+        ReShell("cargo build --release",
+            workdir = jweustRoot,
+            environment = mapOf("`RUST_BACKTRACE`" to "1")
+        ).map { it.also {
+            when(it) {
+                is Signal.Output -> logger.info(it.message)
+                is Signal.Error -> logger.error(it.message)
+                is Signal.Code -> logger.info("Exit code: ${it.code}")
+                else -> Unit
+            }
+        } }.await().apply {
+            require(this is CommandResult.Success) {
+                (this as CommandResult.Failed).let {
+                    """
+                        | Error: build tasks is failed
+                        | - stdout
+                        |${it.processingMessage}
+                        | - stderr
+                        |${it.errorMessage}
+                        | - exit code ${it.code}
+                    """.trimMargin()
+
+                }.let { IOException(it) }
+            }
+        }
     }
     init {
         group = "jweust"

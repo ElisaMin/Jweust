@@ -105,7 +105,7 @@ interface JweustVarsExtension {
     @get:Input
     var applicationType: ApplicationType
     @get:Input
-    var workdir: String
+    var workdir: String?
     @get:Input
     var log: LogConfig
     @get:Input
@@ -120,22 +120,22 @@ interface JweustVarsExtension {
     var splashScreen: SplashScreenConfig?
 
     fun log(block: LogConfig.() -> Unit) {
-        log = LogConfig().apply(block)
+        log = log.apply(block)
     }
     fun exe(block: ExeConfig.() -> Unit) {
-        exe = ExeConfig().apply(block)
+        exe = exe.apply(block)
     }
     fun jar(block: JarConfig.() -> Unit) {
-        jar = JarConfig().apply(block)
+        jar = jar.apply(block)
     }
     fun jre(block: JreConfig.() -> Unit) {
-        jre = JreConfig().apply(block)
+        jre = jre.apply(block)
     }
     fun splashScreen(block: SplashScreenConfig.() -> Unit) {
-        splashScreen = SplashScreenConfig().apply(block)
+        splashScreen = (splashScreen?: SplashScreenConfig()).apply(block)
     }
     fun charset(block:CharsetConfig.() -> Unit) {
-        charset = CharsetConfig().apply(block)
+        charset = charset.apply(block)
     }
 
 }

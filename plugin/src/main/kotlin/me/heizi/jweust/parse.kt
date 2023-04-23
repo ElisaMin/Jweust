@@ -5,7 +5,9 @@ import kotlin.reflect.*
 import kotlin.reflect.full.isSubclassOf
 import kotlin.reflect.full.memberProperties
 import kotlin.reflect.jvm.isAccessible
+
 internal fun JweustConfig.getRustFile():String {
+    workdir = workdir?.takeIf { it.isNotBlank() }
     return arrayOf(
         this,
         log,
@@ -13,13 +15,13 @@ internal fun JweustConfig.getRustFile():String {
         jar, jar.launcher ?: LauncherConfig(),
         jre,
         charset,
-        (splashScreen ?: SplashScreenConfig(null)),
+        splashScreen?:SplashScreenConfig(),
     )
         .asSequence()
-        .map { it.parse() }
+        .map { it.parsePartOfFile() }
         .flatMap { it.lines() }
         .filter { it.isNotEmpty() }
-        .joinToString("\n")
+        .joinToString("\n", prefix = "#![allow(dead_code)]\n")
 }
 
 
@@ -40,10 +42,17 @@ private val KAnnotatedElement.parsePrefix get() =
     annotations.filterIsInstance<RustParsable.Prefix>().firstOrNull()?.prefix
 private val KAnnotatedElement.parseType get() =
     annotations.filterIsInstance<RustParsable.Type>().firstOrNull()?.type
+
 private inline val RustParsable.self get() = this
+
 context(RustParsable)
-private fun KProperty1<out RustParsable,*>.parseRust(prefix: String?):String? = getter.call(self).let { value ->
-    if (value is RustParsable) return@let null else buildString {
+private fun KProperty1<out RustParsable,*>.parseLine(prefix: String?):String? =
+    // test if is RustParseable its Nested, so we can parse it
+    if (returnType.classifier.let {
+        it is KClass<*> && it.isSubclassOf(RustParsable::class)
+    }) null
+    else buildString {
+        //start
         append("pub const ")
         //name
         prefix?.let { append(it) }
@@ -51,33 +60,33 @@ private fun KProperty1<out RustParsable,*>.parseRust(prefix: String?):String? = 
         //type
         append(':')
         val extraType = parseType
-        append(extraType?: returnType.parseRust())
+        append(extraType?: returnType.getRustType())
         //sign
         append(" = ")
         //value
         append(
-            if (extraType == null) value.parseRust(wrap = returnType.isMarkedNullable)
-            else parsingValueExtra(name)!!()
+            if (extraType != null) parsingValueExtra(name)!!()
+            else getter.call(self).getRustValue(wrap = returnType.isMarkedNullable)
         )
         //end
         append(';')
     }
-}
 
-internal fun RustParsable.parse():String {
+
+internal fun RustParsable.parsePartOfFile():String {
     val prefix = this::class.parsePrefix
     return this::class.memberProperties.mapNotNull {
         it.isAccessible = true
-        it.parseRust(prefix)
+        it.parseLine(prefix)
     }.joinToString("\n")
 }
 
-fun KClass<*>.toRustType(
+internal fun KClass<*>.toRustType(
     arguments: List<KTypeProjection> = emptyList(),
 ):String = when {
     java.isArray || isSubclassOf(Iterable::class) || isSubclassOf(Map::class) -> {
         arguments.map {
-            it.type?.parseRust() ?: "None"
+            it.type?.getRustType() ?: "None"
         }.let {
             if (it.size > 1 ) it.joinToString(", ", "(", ")")
             else it.firstOrNull() ?: "None"
@@ -97,38 +106,39 @@ fun KClass<*>.toRustType(
         }
     }
 }
-fun KType.parseRust(nullable:Boolean = isMarkedNullable):String  =
+internal fun KType.getRustType(nullable:Boolean = isMarkedNullable):String  =
     when {
+        (classifier as KClass<*>) == RustParsable::class -> getRustType(nullable = false)
         nullable -> buildString {
             append("Option<")
-            append(this@parseRust.parseRust(false))
+            append(this@getRustType.getRustType(false))
             append(">")
         }
         classifier!=null -> (classifier as KClass<*>).toRustType(arguments)
         else -> "None"
     }
 
-fun Any?.parseRust(wrap: Boolean = false):String {
-    if (wrap && this != null ) return "Some(${this.parseRust()})"
+internal fun Any?.getRustValue(wrap: Boolean = false):String {
+    if (wrap && this != null ) return "Some(${this.getRustValue()})"
     return when (this) {
         is String -> this.replace("\"","\\\"").let {
             "\"$it\""
         }
         is Boolean -> this.toString()
         is Number -> this.toString()
-        is Array<*> -> asIterable().parseRust()
-        is Pair<*,*> -> "(${first.parseRust()}, ${second.parseRust()})"
+        is Array<*> -> asIterable().getRustValue()
+        is Pair<*,*> -> "(${first.getRustValue()}, ${second.getRustValue()})"
         is Map<*,*> -> map {(k,v) ->
             k to v
-        }.parseRust()
+        }.getRustValue()
         is Iterable<*> -> {
-            joinToString { it.parseRust() }.let {
+            joinToString { it.getRustValue() }.let {
                 "&[$it]"
             }
         }
         is JvmSearch -> when(this) {
-            is JvmSearch.EnvVar -> name.parseRust()
-            is JvmSearch.JvmDir -> path.parseRust()
+            is JvmSearch.EnvVar -> name.getRustValue()
+            is JvmSearch.JvmDir -> path.getRustValue()
         }
         else -> "None"
     }
