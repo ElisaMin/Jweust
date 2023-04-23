@@ -1,11 +1,17 @@
 rootProject.name = "Jweust"
-include("plugin")
-//"functionalTestSimpleComposeDemo".let {projName->
-//    include(projName)
-//    project(":$projName")
-//}.run {
-//    projectDir = rootDir.resolve("plugin/src/functionalTest/resources/").apply {
-//        require(exists())
-//        require(isDirectory)
-//    }
-//}
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+        mavenCentral()
+        google()
+        maven("https://maven.pkg.jetbrains.space/public/p/compose/dev")
+        maven {
+            name = "test"
+            url = uri("file://${rootProject.projectDir}/build/maven-repo/")
+        }
+    }
+}
+include(
+    "plugin",
+    "compose-demo"
+)
