@@ -1,11 +1,14 @@
 @file:Suppress("unused")
 package me.heizi.jweust
 
+import me.heizi.jweust.beans.*
 import org.gradle.api.Plugin
 import org.gradle.api.Project
-import org.gradle.api.plugins.JavaPluginExtension
+import org.gradle.api.artifacts.dsl.RepositoryHandler
 import org.gradle.api.tasks.Input
 import java.io.File
+import java.net.URI
+
 
 class JweustPlugin: Plugin<Project> {
     override fun apply(project: Project) { with(project) {
@@ -21,52 +24,8 @@ class JweustPlugin: Plugin<Project> {
         const val EXTENSION_NAME = "jweust"
     }
 }
-private val Project.jweustConfig get() = JweustConfig().apply {
-    rustProjectName = name.toSnackCase()
-    jre {
-        search += JvmSearch.EnvVar("JAVA_HOME")
-        extensions.findByType(JavaPluginExtension::class.java)
-            ?.toolchain
-            ?.languageVersion
-            ?.get()
-            ?.asInt()
-            ?.let { version +=
-                if (it>8) it else "1.${it}".toFloat()
-            }
-    }
 
-    jar {
-        fun foundByOutputFiles(name:String) =
-            tasks.findByName(name)
-                ?.outputs?.files?.firstOrNull()?.name
-                ?.let {fileName ->
-                    files = setOf(fileName)
-                    rustProjectName= fileName.removeSuffix(".jar")
-                }
-        foundByOutputFiles("shadowJar") ?:
-        foundByOutputFiles("jar")
-        Runtime.version().let {
-            jre.version += it.feature()
-        }
-    }
 
-    exe {
-        group.toString().let { owner ->
-            companyName = owner
-            legalCopyright = owner
-        }
-        version.toString().let {version->
-            fileVersion = version
-            productVersion = version
-        }
-        name.let {
-            productName = it
-            internalName = it
-        }
-
-        fileDescription = description?:""
-    }
-}
 /**
  * ~I think it should generate by gradle kts~del-line
  */
@@ -155,8 +114,17 @@ interface JweustExtension:JweustProjectExtension,JweustVarsExtension {
     companion object {
         @Suppress("NOTHING_TO_INLINE")
         internal inline operator fun invoke(project: Project):JweustExtension =
-            object : JweustVarsExtension by project.jweustConfig, JweustExtension {
+            object : JweustVarsExtension by JweustConfig(), JweustExtension {
                 override var jweustRoot: File = project.rootDir.resolve("jweust")
             }
+    }
+}
+@Deprecated("its not usually method, it will be removed in future", level =  DeprecationLevel.HIDDEN,
+    // GitHub Packages
+    replaceWith = ReplaceWith("maven { url = URI.create(\"https://maven.pkg.github.com/ElisaMin/Khell\") }")
+)
+fun RepositoryHandler.heiziGithubRepo() {
+    maven {
+        url = URI.create("https://raw.githubusercontent.com/ElisaMin/Maven/master/")
     }
 }

@@ -9,9 +9,13 @@ pluginManagement {
             name = "test"
             url = uri("file://${rootProject.projectDir}/build/maven-repo/")
         }
+        maven {
+            url = uri("https://raw.githubusercontent.com/ElisaMin/Maven/master/")
+        }
     }
 }
 include(
     "plugin",
     "compose-demo"
 )
+project(":plugin").name = "jweust"

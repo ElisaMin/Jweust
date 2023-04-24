@@ -1,4 +1,4 @@
-package me.heizi.jweust
+package me.heizi.jweust.beans
 
 import java.io.Serializable
 import kotlin.reflect.*
