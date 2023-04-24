@@ -2,6 +2,12 @@
 jweust = "INTERNAL"
 kotlin = "1.8.20"
 compose = "1.4.0"
+khell = "0.0.1-alpha03"
+
+[libraries]
+# "me.heizi.kotlinx:khell:0.0.1-alpha03"
+khell-self = { module = "me.heizi.kotlinx:khell", version.ref = "khell" }
+khell-api = { module = "me.heizi.kotlinx:khell-api", version.ref = "khell" }
 
 [plugins]
 kotlin = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
