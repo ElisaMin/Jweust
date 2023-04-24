@@ -10,10 +10,11 @@ import org.gradle.kotlin.dsl.extra
 
 object JweustDefault {
     const val ALL = "jweust.default"
-    const val NAME = "jweust.default.name"
     const val JAR = "jweust.default.jar"
     const val EXE = "jweust.default.exe"
     const val JRE = "jweust.default.jre"
+    const val NAME = "jweust.default.name"
+    const val VERSION = "jweust.default.version"
 }
 
 fun ExtraPropertiesExtension.getOrNull(key:String) = runCatching { get(key) }.getOrNull()
@@ -37,6 +38,9 @@ internal fun JweustExtension.default() = doIfAllow(JweustDefault.ALL) {
     }
     doIfAllow(JweustDefault.JRE) {
         jre.default()
+    }
+    doIfAllow(JweustDefault.VERSION) {
+        rustProjectVersion = version.toString().createValidatedVersionOf(3)
     }
     logger.info("Jweust: default settings is done")
     logger.debug("Jweust: default, {}", this)
@@ -72,8 +76,8 @@ internal fun ExeConfig.default() {
     }
 
     version.toString().takeIf { it.isNotBlank() }?.let { version->
-        if (fileVersion.isEmpty()) fileVersion = version
-        if (productVersion.isEmpty()) productVersion = version
+        if (fileVersion.isEmpty()) fileVersion = version.createValidatedVersionOf(4)
+        if (productVersion.isEmpty()) productVersion = version.createValidatedVersionOf(4)
         fileVersion = version
         productVersion = version
     }

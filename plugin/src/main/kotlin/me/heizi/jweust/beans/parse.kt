@@ -7,11 +7,18 @@ import kotlin.reflect.full.memberProperties
 import kotlin.reflect.jvm.isAccessible
 
 
-internal fun String.createValidatedVersionOf(len:Int):String = buildString {
-    val r = this@createValidatedVersionOf.split(".").map { it.toIntOrNull()?.toString()?:"0" }
-    repeat(len) {
-        if (it!=0) append('.')
-        append(r.getOrNull(it) ?: "0")
+internal fun String.createValidatedVersionOf(len:Int):String {
+    val s = this
+    return split(".").mapNotNull { it.toIntOrNull() }.run {
+        if (len == size) s else
+        if (size+1==len && last() == 0 ) {
+            dropLast(1).joinToString(".")
+        } else buildString {
+            repeat(len) {
+                if (it!=0) append('.')
+                append(getOrNull(it)?.toString()?:"0")
+            }
+        }
     }
 }
 internal fun JweustConfig.getRustFile():String {

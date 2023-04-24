@@ -75,13 +75,7 @@ open class JweustTask @Inject constructor (
     private fun parseAfter() = jweustRoot.resolve("cargo.toml").apply {
         val o = readText().lines()
         val (name,version) = o.run {
-            lineDiff(1,"name",rustProjectName) to lineDiff(2,"version",exe.productVersion.split('.').run {
-                when {
-                    last()=="0" -> dropLast(1)
-                    first()=="0" -> drop(1)
-                    else -> dropLast(1)
-                }
-            }.joinToString("."))
+            lineDiff(1,"name",rustProjectName) to lineDiff(2,"version",rustProjectVersion)
         }
         if (name!=null || version!=null ) o.toMutableList().apply {
             name?.let { this[1] = it }

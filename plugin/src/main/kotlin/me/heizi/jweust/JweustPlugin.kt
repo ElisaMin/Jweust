@@ -38,13 +38,8 @@ interface JweustProjectExtension {
      * @see JweustTask.cloneBefore
      */
     var jweustRoot:File
-
-    companion object {
-        @Suppress("NOTHING_TO_INLINE")
-        inline operator fun invoke(project: Project) = object : JweustProjectExtension {
-            override var jweustRoot: File = project.rootDir.resolve("jweust")
-        }
-    }
+    @get:Input
+    var rustProjectVersion:String
 }
 
 /**
@@ -106,6 +101,7 @@ interface JweustExtension:JweustProjectExtension,JweustVarsExtension {
         internal inline operator fun invoke(project: Project):JweustExtension =
             object : JweustVarsExtension by JweustConfig(), JweustExtension {
                 override var jweustRoot: File = project.rootDir.resolve("jweust")
+                override var rustProjectVersion: String = project.version.toString().createValidatedVersionOf(3)
             }
     }
     fun Project.disableDefaults() {
@@ -116,12 +112,14 @@ interface JweustExtension:JweustProjectExtension,JweustVarsExtension {
         generateExeConfig: Boolean = true,
         generateJarConfig: Boolean = true,
         generateJreConfig: Boolean = true,
+        generateRustProjectVersion: Boolean = true,
     ) {
         extra[JweustDefault.ALL] = true
         extra[JweustDefault.NAME] = defaultName
         extra[JweustDefault.EXE] = generateExeConfig
         extra[JweustDefault.JAR] = generateJarConfig
         extra[JweustDefault.JRE] = generateJreConfig
+        extra[JweustDefault.VERSION] = generateRustProjectVersion
         default()
     }
 }
