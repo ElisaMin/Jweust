@@ -3,11 +3,10 @@
  */
 package me.heizi.jweust
 
-import java.io.File
-import kotlin.test.assertTrue
-import kotlin.test.Test
 import org.gradle.testkit.runner.GradleRunner
 import org.junit.jupiter.api.io.TempDir
+import java.io.File
+import kotlin.test.Test
 
 /**
  * A simple functional test for the 'me.heizi.jweust.greeting' plugin.
@@ -27,17 +26,21 @@ class JweustPluginFunctionalTest {
             plugins {
                 id("me.heizi.jweust")
             }
+            group = "me.heizi.jweust"
+            version = "1.0"
+            jweust {
+                defaults()
+            }
         """.trimIndent())
 
         // Run the build
         val runner = GradleRunner.create()
-        runner.forwardOutput()
         runner.withPluginClasspath()
-        runner.withArguments("greeting")
+        runner.withArguments("jweust","--stacktrace","--info","--debug")
         runner.withProjectDir(projectDir)
-        val result = runner.build()
-
-        // Verify the result
-        assertTrue(result.output.contains("Hello from plugin 'me.heizi.jweust.greeting'"))
+        runner.build()
+//
+//        // Verify the result
+//        assertTrue(result.output.contains("Hello from plugin 'me.heizi.jweust.greeting'"))
     }
 }
