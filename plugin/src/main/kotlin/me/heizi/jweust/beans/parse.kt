@@ -9,15 +9,14 @@ import kotlin.reflect.jvm.isAccessible
 
 internal fun String.createValidatedVersionOf(len:Int):String {
     val s = this
-    return split(".").mapNotNull { it.toIntOrNull() }.run {
-        if (len == size) s else
-        if (size+1==len && last() == 0 ) {
-            dropLast(1).joinToString(".")
-        } else buildString {
-            repeat(len) {
-                if (it!=0) append('.')
-                append(getOrNull(it)?.toString()?:"0")
-            }
+    val list = split(".").asSequence().mapNotNull { it.toIntOrNull() }
+    val c = list.count()
+    if (c == len) return s
+    if ((c-1)==len && list.lastOrNull() == 0) return dropLast(1)
+    return buildString {
+        repeat(len) {
+            if (it!=0) append('.')
+            append(list.elementAtOrNull(it) ?: "0")
         }
     }
 }

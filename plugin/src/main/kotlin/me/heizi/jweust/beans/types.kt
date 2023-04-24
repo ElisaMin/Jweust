@@ -1,6 +1,8 @@
 package me.heizi.jweust.beans
 
-sealed interface ApplicationType {
+import java.io.Serializable
+
+sealed interface ApplicationType:Serializable {
     object Console: ApplicationType
     object Application: ApplicationType
     class ConsoleWhileOptionApplication(

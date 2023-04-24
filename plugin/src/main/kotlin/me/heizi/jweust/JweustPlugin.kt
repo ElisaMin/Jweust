@@ -6,6 +6,7 @@ import me.heizi.jweust.beans.*
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.kotlin.dsl.extra
 import java.io.File
@@ -56,6 +57,7 @@ interface JweustVarsExtension {
     @get:Input
     var applicationType: ApplicationType
     @get:Input
+    @get:Optional
     var workdir: String?
     @get:Input
     var log: LogConfig
@@ -68,6 +70,7 @@ interface JweustVarsExtension {
     @get:Input
     var charset: CharsetConfig
     @get:Input
+    @get:Optional
     var splashScreen: SplashScreenConfig?
 
     fun log(block: LogConfig.() -> Unit) {
