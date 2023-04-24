@@ -1,10 +1,12 @@
 @file:Suppress("unused")
 package me.heizi.jweust
 
+import me.heizi.jweust.JweustVarsExtension.Companion.asJwConfig
 import me.heizi.jweust.beans.*
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.OutputDirectory
 import org.gradle.kotlin.dsl.extra
 import java.io.File
 
@@ -34,9 +36,10 @@ interface JweustProjectExtension {
     /**
      * defined a root path to build the exe from jweust rust project and its same dir as clone tasks
      *
-     * @see JweustTask.clone
-     * @see JweustTask.cloneBefore
+     * @see JweustTasks.clone
+     * @see JweustTasks.checkCloneDirsWithReason
      */
+    @get:OutputDirectory
     var jweustRoot:File
     @get:Input
     var rustProjectVersion:String
@@ -85,7 +88,9 @@ interface JweustVarsExtension {
     fun charset(block:CharsetConfig.() -> Unit) {
         charset = charset.apply(block)
     }
-
+    companion object {
+        internal inline val JweustVarsExtension.asJwConfig get() = JweustConfig(rustProjectName,applicationType,workdir, log,exe,jar,jre,charset,splashScreen)
+    }
 }
 
 
@@ -102,8 +107,11 @@ interface JweustExtension:JweustProjectExtension,JweustVarsExtension {
             object : JweustVarsExtension by JweustConfig(), JweustExtension {
                 override var jweustRoot: File = project.rootDir.resolve("jweust")
                 override var rustProjectVersion: String = project.version.toString().createValidatedVersionOf(3)
+                override fun toString(): String = "root=$jweustRoot,version=$rustProjectVersion,${asJwConfig}"
+
             }
     }
+
     fun Project.disableDefaults() {
         extra[JweustDefault.ALL] = false
     }

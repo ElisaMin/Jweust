@@ -1,4 +1,4 @@
-package me.heizi.jweust
+package me.heizi.jweust.beans
 
 import kotlin.test.Test
 import kotlin.test.assertEquals

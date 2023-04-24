@@ -1,6 +1,7 @@
 package me.heizi.jweust
 
 import com.github.javaparser.utils.Utils.assertNotNull
+import org.gradle.api.Project
 import org.gradle.testfixtures.ProjectBuilder
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -13,31 +14,44 @@ class JweustPluginTest {
     // Create a test project and apply the plugin
     private val project by lazy { ProjectBuilder.builder().build().also {
         it.plugins.apply("me.heizi.jweust")
-        it.Jweust {
-            jweustRoot = it.buildDir.resolve("../../jweust")
-        }
     } }
 
     @Test fun `plugin registers task`() {
         assertNotNull(project.tasks.findByName(JweustTask.NAME))
     }
-
+    @Test fun `plugin registers extension`() {
+        assertNotNull(project.extensions.findByName(JweustPlugin.EXTENSION_NAME))
+    }
     @Test fun `plugin registers config`() {
         val projectName = "test-by-gradle"
-        project.Jweust {
-
+        project.jweust {
             rustProjectName = projectName
         }
         assertEquals(projectName,project.tasks.withType(JweustTask::class.java).first().rustProjectName)
     }
+
     private val task by lazy {
         project.tasks.withType(JweustTask::class.java).first()
     }
+    @Test fun `jweust parse`() {
 
-    @Test fun `jweust tasks`() {
-        task.clone()
-        task.parse()
-        task.build()
     }
 
+    @Test fun `jweust tasks`() {
+        with(project) {
+            jweust {
+                defaults()
+                jweustRoot = buildDir.resolve("../../jweust")
+                println(this)
+            }
+        }
+        task.cloneWithOutSave()
+        task.parseWithOutSave()
+        task.buildWithOutSave()
+    }
+
+}
+
+private fun Project.jweust(function: JweustExtension.() -> Unit) {
+    extensions.getByType(JweustExtension::class.java).apply(function)
 }
