@@ -1,9 +1,15 @@
 package me.heizi.jweust.beans
 
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.Optional
+
 //pub const JAR_FILES:&[&str] = &[r#"./lib/AndroidPackageSideloadTool.jar"#];
 @RustParsable.Prefix("JAR_")
 data class JarConfig(
+    @get:Input
     var files: Set<String> = emptySet(),
+    @get:Input
+    @get:Optional
     var launcher: LauncherConfig? = null
 ): RustParsable
 

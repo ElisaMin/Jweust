@@ -2,6 +2,8 @@
 package me.heizi.jweust.beans
 
 import me.heizi.jweust.JweustVarsExtension
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.Optional
 
 
 //pub const CHARSET_STDOUT:Option<&'static str> = Some("GBK");
@@ -9,8 +11,14 @@ import me.heizi.jweust.JweustVarsExtension
 //pub const CHARSET_PAGE_CODE:Option<&'static str> = None;
 @RustParsable.Prefix("CHARSET_")
 data class CharsetConfig(
+    @get:Input
+    @get:Optional
     var jvm:String? = null,
+    @get:Input
+    @get:Optional
     var stdout :String? = null,
+    @get:Input
+    @get:Optional
     var pageCode: String? = null
 ):RustParsable {
     companion object {
@@ -27,13 +35,10 @@ data class CharsetConfig(
 //pub const SPLASH_SCREEN_IMAGE_FILE:Option<&'static str> = None;
 @RustParsable.Prefix("SPLASH_SCREEN_")
 data class SplashScreenConfig(
+    @get:Input
+    @get:Optional
     var imagePath: String? = null,
 ):RustParsable
-
-sealed interface JvmSearch {
-    data class JvmDir(val path: String):JvmSearch
-    data class EnvVar(val name: String):JvmSearch
-}
 
 
 data class JweustConfig(

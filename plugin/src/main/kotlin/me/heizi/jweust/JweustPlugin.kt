@@ -6,6 +6,7 @@ import me.heizi.jweust.beans.*
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.Nested
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.kotlin.dsl.extra
@@ -61,15 +62,15 @@ interface JweustVarsExtension {
     var workdir: String?
     @get:Input
     var log: LogConfig
-    @get:Input
+    @get:Nested
     var exe: ExeConfig
-    @get:Input
+    @get:Nested
     var jar: JarConfig
-    @get:Input
+    @get:Nested
     var jre: JreConfig
-    @get:Input
+    @get:Nested
     var charset: CharsetConfig
-    @get:Input
+    @get:Nested
     @get:Optional
     var splashScreen: SplashScreenConfig?
 

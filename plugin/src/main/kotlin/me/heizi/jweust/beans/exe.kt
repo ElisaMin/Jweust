@@ -1,6 +1,10 @@
 package me.heizi.jweust.beans
 
-enum class Permissions {
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.Optional
+import java.io.Serializable
+
+enum class Permissions:Serializable {
     Default,
     HighersInTheRoom,
     Administrator,
@@ -21,21 +25,31 @@ enum class Permissions {
 //pub const EXE_PRODUCT_NAME:&str = "Android Package Sideload Tool";
 @RustParsable.Prefix("EXE_")
 data class ExeConfig(
+    @get:Input
     var isInstance: Boolean = true,
+    @get:Input
     var arch: String = "x86_64",
+    @get:Input
     @RustParsable.Type("i8")
-    //EXE_PERMISSION
     @RustParsable.Name("PERMISSION")
     var permissions: Permissions = Permissions.Default,
-    //EXE_ICON_PATH
+    @get:Input
+    @get:Optional
     @RustParsable.Name("ICON_PATH")
     var icon: String? = null,
+    @get:Input
     var fileVersion: String = "",
+    @get:Input
     var productVersion: String = "",
+    @get:Input
     var productName: String = "",
+    @get:Input
     var internalName: String = "",
+    @get:Input
     var fileDescription: String = "",
+    @get:Input
     var legalCopyright: String = "",
+    @get:Input
     var companyName: String = ""
 ) : RustParsable {
     override fun parsingValueExtra(name: String): (() -> String) {

@@ -1,5 +1,6 @@
 package me.heizi.jweust.beans
 
+import org.gradle.api.tasks.Internal
 import java.io.Serializable
 import kotlin.reflect.*
 import kotlin.reflect.full.isSubclassOf
@@ -45,6 +46,7 @@ internal fun JweustConfig.getRustFile():String {
 
 
 internal interface RustParsable:Serializable {
+    @Internal
     fun parsingValueExtra(name: String):(()->String)? {
         return null
     }
