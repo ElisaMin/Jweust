@@ -4,65 +4,43 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.runBlocking
 import me.heizi.kotlinx.shell.*
 import org.gradle.api.Task
-import org.slf4j.Logger
+import org.gradle.api.logging.Logger
 import java.io.File
 import java.io.FileWriter
 import java.io.IOException
 
 
-// for test
-@Suppress("NOTHING_TO_INLINE")
-internal inline fun JweustTasks.cloneWithOutSave()  {
-    checkCloneDirsWithReason()?.let {
-        logger.warn(it)
-        return
-    }
-    justClone()
-}
-@Suppress("NOTHING_TO_INLINE")
-internal inline fun JweustTasks.parseWithOutSave() =
-    arrayOf(parseVars(),parseToml())
-@Suppress("NOTHING_TO_INLINE")
-internal inline fun JweustTasks.buildWithOutSave(): File {
-    buildRust()
-    return searchExe()
-}
-
-//
 internal interface JweustTasks: JweustProjectExtension {
 
     val rustConfig: String
-    val logger: Logger
+    @Suppress("PropertyName")
+    val _logger: Logger
     val rustProjectName:String
 
     fun clone(task: Task) {
-        cloneWithOutSave()
-        with(task) {
-            saveCloneResult()
+        checkCloneDirsWithReason()?.let {
+            _logger.warn(it)
+            return
         }
+        justClone()
+        _logger.lifecycle("clone is done")
     }
 
     fun parse(task: Task) {
-        val parsed = parseWithOutSave()
-        with(task) {
-            saveParseResult(parsed)
-        }
+        arrayOf(parseVars(),parseToml())
+        _logger.lifecycle("parse is done")
     }
 
     fun build(task: Task) {
-        buildWithOutSave()
-        with(task) { saveBuildResult(
+        buildRust()
+        with(task) {
             setArtifact(searchExe())
-        ) }
+        }
+        _logger.lifecycle("build is done")
     }
 
-    fun clean() {
+    fun clean(task: Task) {
         jweustRoot.deleteRecursively()
-    }
-    private fun Task.save(vararg files: File, property: String?=null) {
-        this.outputs.file(files.clone()).run {
-            if (property!=null) withPropertyName("jweust.$property")
-        }
     }
 
     fun checkCloneDirsWithReason():String? {
@@ -90,15 +68,6 @@ internal interface JweustTasks: JweustProjectExtension {
         }
     }
 
-
-    context(Task)
-    fun saveCloneResult() {
-        save(*jweustRoot.listFiles()!!.filter { file ->
-            val fileName = file.name
-            arrayOf(".git","cargo.toml") // exclude
-                .none { it == fileName }
-        }.toTypedArray(),property = "rust.files")
-    }
 
     fun parseVars() = jweustRoot.absoluteFile.resolve(FILE_WITH_DIR).apply {
         FileWriter(this, false).use {
@@ -133,10 +102,6 @@ internal interface JweustTasks: JweustProjectExtension {
             }
         }
     }
-    context(Task)
-    fun saveParseResult(parsed:Array<File>) {
-        save(*parsed,property = "rust.parsed")
-    }
     @OptIn(ExperimentalApiReShell::class)
     fun buildRust() = runBlocking {
         ReShell(
@@ -146,9 +111,9 @@ internal interface JweustTasks: JweustProjectExtension {
         ).map {
             it.also {
                 when (it) {
-                    is Signal.Output -> logger.info(it.message)
-                    is Signal.Error -> logger.error(it.message)
-                    is Signal.Code -> logger.info("Exit code: ${it.code}")
+                    is Signal.Output -> _logger.info(it.message)
+                    is Signal.Error -> _logger.error(it.message)
+                    is Signal.Code -> _logger.info("Exit code: ${it.code}")
                     else -> Unit
                 }
             }
@@ -181,7 +146,7 @@ internal interface JweustTasks: JweustProjectExtension {
             }
         ?: throw IllegalStateException("exe not found")
     }.apply {
-        logger.info("build success. exe : $absolutePath")
+        _logger.info("build success. exe : $absolutePath")
     }
     context(Task)
     fun setArtifact(artifact: File): File {
@@ -195,11 +160,6 @@ internal interface JweustTasks: JweustProjectExtension {
             type = "exe"
         }
         return r
-    }
-
-    context(Task)
-    fun saveBuildResult(exe: File) {
-        save(exe,property = "rust.exe")
     }
 
 

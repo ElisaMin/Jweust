@@ -21,7 +21,12 @@ class JweustPlugin: Plugin<Project> {
             JweustTask.NAME,
             JweustTask::class.java,
             extensions.getByType(JweustExtension::class.java)
-        )
+        ).get().apply {
+            // fixme: flexible cache
+            group = "jweust"
+            description = "build exe from rust project after clone and parsed"
+            taskAction()
+        }
     } }
     companion object {
         const val EXTENSION_NAME = "jweust"

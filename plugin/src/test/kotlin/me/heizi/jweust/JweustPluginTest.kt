@@ -45,9 +45,9 @@ class JweustPluginTest {
                 println(this)
             }
         }
-        task.cloneWithOutSave()
-        task.parseWithOutSave()
-        task.buildWithOutSave()
+        task.clone(task)
+        task.parse(task)
+        task.build(task)
     }
 
 }

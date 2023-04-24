@@ -6,9 +6,8 @@ import me.heizi.jweust.beans.allow
 import me.heizi.jweust.beans.default
 import me.heizi.jweust.beans.getRustFile
 import org.gradle.api.DefaultTask
+import org.gradle.api.logging.Logger
 import org.gradle.api.tasks.Internal
-import org.gradle.api.tasks.TaskAction
-import org.slf4j.Logger
 import javax.inject.Inject
 
 
@@ -16,7 +15,8 @@ open class JweustTask @Inject constructor (
     extension: JweustExtension
 ): DefaultTask(),JweustExtension by extension,JweustTasks {
 
-    override val logger: Logger
+
+    override val _logger: Logger
         @Internal
         get() = super.getLogger()
     override val rustConfig: String
@@ -26,12 +26,13 @@ open class JweustTask @Inject constructor (
     companion object {
         const val NAME = "jweust"
     }
-    @TaskAction
-    private fun taskAction() {
-        if (project.allow(JweustDefault.ALL)) doFirst {
-            with(project) {
-                default()
-            }
+
+    internal fun taskAction() {
+        doFirst {
+            if (project.allow(JweustDefault.ALL))
+                with(project) {
+                    default()
+                }
         }
         doFirst("clone") {
             clone(this)
@@ -42,6 +43,7 @@ open class JweustTask @Inject constructor (
         doLast("build") {
             build(this)
         }
+
     }
 
 }

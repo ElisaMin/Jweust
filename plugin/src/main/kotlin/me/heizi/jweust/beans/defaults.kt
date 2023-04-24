@@ -19,7 +19,7 @@ object JweustDefault {
 
 fun ExtraPropertiesExtension.getOrNull(key:String) = runCatching { get(key) }.getOrNull()
 fun Project.allow(key:String) = extra.getOrNull(key) != false
-inline fun Project.doIfAllow(key:String, crossinline block:()->Unit) {
+internal inline fun Project.doIfAllow(key:String, crossinline block:()->Unit) {
     if (allow(key)) block()
 }
 
