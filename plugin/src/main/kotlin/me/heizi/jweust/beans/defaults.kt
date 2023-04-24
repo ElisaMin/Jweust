@@ -2,19 +2,42 @@ package me.heizi.jweust.beans
 
 import me.heizi.jweust.JweustExtension
 import org.gradle.api.Project
+import org.gradle.api.plugins.ExtraPropertiesExtension
 import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.kotlin.dsl.extra
 
+
+object JweustDefault {
+    const val ALL = "jweust.default"
+    const val NAME = "jweust.default.name"
+    const val JAR = "jweust.default.jar"
+    const val EXE = "jweust.default.exe"
+    const val JRE = "jweust.default.jre"
+}
+
+fun ExtraPropertiesExtension.getOrNull(key:String) = runCatching { get(key) }.getOrNull()
+fun Project.allow(key:String) = extra.getOrNull(key) != false
+inline fun Project.doIfAllow(key:String, crossinline block:()->Unit) {
+    if (allow(key)) block()
+}
+
 context(Project)
-internal fun JweustExtension.default() {
-    if (extra["jweust.default.jar"] != false)
-    rustProjectName = jar.default()
-        ?: name.toSnackCase().takeIf { it.isNotBlank() }!!
-    if (extra["jweust.default.exe"] != false)
-    exe.default()
-    if (extra["jweust.default.jre"] != false)
-    jre.default()
+internal fun JweustExtension.default() = doIfAllow(JweustDefault.ALL) {
+    doIfAllow(JweustDefault.NAME) {
+        rustProjectName = name.toSnackCase().takeIf { it.isNotBlank() }!!
+    }
+    doIfAllow(JweustDefault.JAR) {
+        jar.default()?.let { doIfAllow(JweustDefault.NAME) {
+            rustProjectName = it
+        } }
+    }
+    doIfAllow(JweustDefault.EXE) {
+        exe.default()
+    }
+    doIfAllow(JweustDefault.JRE) {
+        jre.default()
+    }
     logger.info("Jweust: default settings is done")
     logger.debug("Jweust: default, {}", this)
 }

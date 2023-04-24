@@ -2,13 +2,10 @@ package me.heizi.jweust
 
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.runBlocking
-import me.heizi.jweust.beans.JweustConfig
-import me.heizi.jweust.beans.default
-import me.heizi.jweust.beans.getRustFile
+import me.heizi.jweust.beans.*
 import me.heizi.kotlinx.shell.*
 import org.gradle.api.DefaultTask
 import org.gradle.api.Task
-import org.gradle.kotlin.dsl.extra
 import java.io.File
 import java.io.FileWriter
 import java.io.IOException
@@ -166,7 +163,7 @@ open class JweustTask @Inject constructor (
 
     init {
         group = "jweust"
-        if (project.extra["jweust.default"] != false) doFirst {
+        if (project.allow(JweustDefault.ALL)) doFirst {
             with(project) {
                 default()
             }
