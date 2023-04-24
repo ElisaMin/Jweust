@@ -1,3 +1,4 @@
+@file:Suppress("unused")
 package me.heizi.jweust.beans
 
 //pub const JRE_SEARCH_DIR:&[&str] = &["./lib/runtime"];
