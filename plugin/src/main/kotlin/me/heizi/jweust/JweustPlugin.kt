@@ -4,10 +4,9 @@ package me.heizi.jweust
 import me.heizi.jweust.beans.*
 import org.gradle.api.Plugin
 import org.gradle.api.Project
-import org.gradle.api.artifacts.dsl.RepositoryHandler
 import org.gradle.api.tasks.Input
+import org.gradle.kotlin.dsl.extra
 import java.io.File
-import java.net.URI
 
 
 class JweustPlugin: Plugin<Project> {
@@ -23,15 +22,6 @@ class JweustPlugin: Plugin<Project> {
     companion object {
         const val EXTENSION_NAME = "jweust"
     }
-}
-
-
-/**
- * ~I think it should generate by gradle kts~del-line
- */
-@Suppress("FunctionName")
-fun Project.Jweust(configure: JweustExtension.() -> Unit) {
-    extensions.configure("jweust", configure)
 }
 
 /**
@@ -118,13 +108,20 @@ interface JweustExtension:JweustProjectExtension,JweustVarsExtension {
                 override var jweustRoot: File = project.rootDir.resolve("jweust")
             }
     }
-}
-@Deprecated("its not usually method, it will be removed in future", level =  DeprecationLevel.HIDDEN,
-    // GitHub Packages
-    replaceWith = ReplaceWith("maven { url = URI.create(\"https://maven.pkg.github.com/ElisaMin/Khell\") }")
-)
-fun RepositoryHandler.heiziGithubRepo() {
-    maven {
-        url = URI.create("https://raw.githubusercontent.com/ElisaMin/Maven/master/")
+    fun Project.disableDefaults() {
+        extra[JweustDefault.ALL] = false
+    }
+    fun Project.defaults(
+        defaultName: Boolean = true,
+        generateExeConfig: Boolean = true,
+        generateJarConfig: Boolean = true,
+        generateJreConfig: Boolean = true,
+    ) {
+        extra[JweustDefault.ALL] = true
+        extra[JweustDefault.NAME] = defaultName
+        extra[JweustDefault.EXE] = generateExeConfig
+        extra[JweustDefault.JAR] = generateJarConfig
+        extra[JweustDefault.JRE] = generateJreConfig
+        default()
     }
 }
