@@ -52,6 +52,6 @@ class JweustPluginTest {
 
 }
 
-private fun Project.jweust(function: JweustExtension.() -> Unit) {
+internal fun Project.jweust(function: JweustExtension.() -> Unit) {
     extensions.getByType(JweustExtension::class.java).apply(function)
 }

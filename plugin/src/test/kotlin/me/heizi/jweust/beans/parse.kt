@@ -1,5 +1,6 @@
 package me.heizi.jweust.beans
 
+import me.heizi.jweust.beans.JreConfig.Companion.min
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -12,6 +13,10 @@ class PluginsObjectParseTest {
     @Test fun `parse jar`() {
         val jar = config.jar
         println(jar.parsePartOfFile()+"\n"+(jar.launcher?:LauncherConfig()).parsePartOfFile())
+    }
+    @Test fun `parse jre`() {
+        val jvm = config.jre
+        println(jvm.parsePartOfFile())
     }
 
 
@@ -52,7 +57,7 @@ class PluginsObjectParseTest {
             jre.search += JvmSearch.JvmDir("./jvm/")
             jre.search += JvmSearch.JvmDir("./lib/runtime")
             jre.search += JvmSearch.EnvVar("JAVA_HOME")
-            jre versions 19.0f .. Float.MAX_VALUE
+            jre.min = 19u
 
             charset {
                 jvm = "GBK"

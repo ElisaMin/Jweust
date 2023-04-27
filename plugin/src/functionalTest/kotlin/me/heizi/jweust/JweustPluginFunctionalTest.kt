@@ -33,13 +33,16 @@ class JweustPluginFunctionalTest {
             }
         """.trimIndent())
 
+
         // Run the build
-        val runner = GradleRunner.create()
-        runner.withPluginClasspath()
-        runner.withArguments("jweust","--stacktrace","--info","--debug")
-        runner.withProjectDir(projectDir)
-        runner.build()
+        GradleRunner.create().
+        withPluginClasspath().
+        withArguments("jweust","--stacktrace","--info",).
+        withProjectDir(projectDir).
+        forwardOutput().
+        build()
 //
+
 //        // Verify the result
 //        assertTrue(result.output.contains("Hello from plugin 'me.heizi.jweust.greeting'"))
     }
