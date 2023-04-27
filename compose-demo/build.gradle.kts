@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.kotlin)
     alias(libs.plugins.compose)
     alias(libs.plugins.jweust)
+    alias(libs.plugins.shadowjar)
 }
 dependencies {
     implementation(compose.desktop.currentOs)
@@ -17,22 +18,15 @@ repositories {
 
 group = "me.heizi.jweust.demo.compose"
 version = "1.0.0"
-java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(17)
-    }
+kotlin {
+    jvmToolchain(19)
 }
-
 kotlin {
     target { compilations.all {
         kotlinOptions {
             freeCompilerArgs += "-Xcontext-receivers"
         }
     } }
-}
-
-jweust {
-    defaults()
 }
 
 compose.desktop {
@@ -43,5 +37,12 @@ compose.desktop {
 //            packageName = "compose-demo"
 //            packageVersion = "1.0.0"
 //        }
+    }
+}
+
+jweust {
+    defaults()
+    tasks.shadowJar {
+        jar.files = setOf(outputs.files.files.first().canonicalPath)
     }
 }

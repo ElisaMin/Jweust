@@ -3,6 +3,7 @@ jweust = "INTERNAL"
 kotlin = "1.8.20"
 compose = "1.4.0"
 khell = "0.0.1-alpha03"
+jar = "8.1.1"
 
 [libraries]
 # "me.heizi.kotlinx:khell:0.0.1-alpha03"
@@ -13,3 +14,4 @@ khell-api = { module = "me.heizi.kotlinx:khell-api", version.ref = "khell" }
 kotlin = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 compose = { id = "org.jetbrains.compose", version.ref = "compose" }
 jweust = { id = "me.heizi.jweust", version.ref = "jweust" }
+shadowjar = { id = "com.github.johnrengelman.shadow", version.ref = "jar" }
