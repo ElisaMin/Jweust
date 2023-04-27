@@ -17,23 +17,32 @@ sealed interface JvmSearch:Serializable {
 //pub const JRE_SEARCH_ENV:&[&str] = &["JAVA_HOME"];
 //pub const JRE_OPTIONS:&[&str] = &[];
 //pub const JRE_NATIVE_LIBS:&[&str] = &[];
-//pub const JRE_VERSION:&[&str] = &["19.0"];
+//pub const JRE_VERSION:(u8,u8) = (0,255);
 @RustParsable.Prefix("JRE_")
 data class JreConfig(
     @get:Input
     var searchDir: MutableSet<JvmSearch.JvmDir> = mutableSetOf(),
     @get:Input
-    var searchEnv : MutableSet<JvmSearch.EnvVar> = mutableSetOf(),
+    var searchEnv: MutableSet<JvmSearch.EnvVar> = mutableSetOf(),
     @get:Input
     var options: MutableSet<String> = mutableSetOf(),
     @RustParsable.Name("NATIVE_LIBS")
     @get:Input
     var nativeLibsPath: MutableSet<String> = mutableSetOf(),
-    @get:Input
-    @RustParsable.Type("&[&'static str]")
-    var version: Set<Number> = emptySet(),
+    @get:Internal
+//    @RustParsable.Type("(u8,u8)")
+    // min to max
+    var version: Pair<UByte,UByte> = UByte.MIN_VALUE to UByte.MAX_VALUE ,
 //    val preferred: JrePreferred = JrePreferred.DefaultVM
 ): RustParsable,Serializable {
+    companion object {
+        var JreConfig.min:UInt
+            get() = version.first.toUInt()
+            set(value) { version = value.toInt().toUByte() to version.second  }
+        var JreConfig.max:UInt
+            get() = version.second.toUInt()
+            set(value) { version = version.first to value.toInt().toUByte() }
+    }
 
     @get:Internal
     val search: MutableSet<JvmSearch> = object : MutableSet<JvmSearch> by mutableSetOf(), RustParsable {
@@ -52,21 +61,7 @@ data class JreConfig(
 
     }
 
-    infix fun versions(range: ClosedFloatingPointRange<Float>) {
-        version = sequenceOf(1.6f,1.7f,1.8f,9f,10f,11f,12f,13f,14f,15f,16f,17f,18f,19f,20f,21f,22f,23f,24f)
-            .filter { it in range }.toSet()
-    }
     override fun parsingValueExtra(name: String): (() -> String)? {
-        if (name == "version") return {
-            version.map { f -> when (f) {
-                is Double -> f.toInt().takeIf { it>2 } ?:f
-                is Float -> f.toInt().takeIf { it>2 } ?:f
-                else -> f
-            }.toString()
-            }.joinToString(",", "&[", "]" ) {
-                "\"$it\""
-            }
-        }
         return null
     }
 

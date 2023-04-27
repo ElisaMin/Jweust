@@ -121,6 +121,13 @@ internal fun KClass<*>.toRustType(
         Long::class -> "i64"
         Double::class -> "f64"
         Boolean::class -> "bool"
+        UByte::class -> "u8"
+        Triple::class,
+        Pair::class -> arguments.joinToString(
+            prefix = "(",
+            separator = ", ",
+            postfix = ")"
+        ) { it.type?.getRustType() ?: "None" }
         else -> when {
             isSubclassOf(JvmSearch::class) -> String::class.toRustType()
             else -> "None"
@@ -144,8 +151,9 @@ internal fun Any?.getRustValue(wrap: Boolean = false):String {
     return when (this) {
         is String -> this.replace("\"","\\\"").let {
             "\"$it\""
-        }
+        }.replace("""\""","""\\""")
         is Boolean -> this.toString()
+        is UByte -> this.toString()
         is Number -> this.toString()
         is Array<*> -> asIterable().getRustValue()
         is Pair<*,*> -> "(${first.getRustValue()}, ${second.getRustValue()})"
@@ -166,7 +174,7 @@ internal fun Any?.getRustValue(wrap: Boolean = false):String {
 }
 
 internal fun String.toSnackCase():String {
-    return this.replace(Regex("([A-Z])")) {
-        "_${it.value.lowercase()}"
-    }
+    return this.replace(Regex("-?([A-Z]|\\s+)")) {
+        "_${it.value.lowercase().trim()}"
+    }.trim('_')
 }

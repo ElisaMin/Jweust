@@ -1,11 +1,14 @@
 package me.heizi.jweust.beans
 
 import me.heizi.jweust.JweustExtension
+import me.heizi.jweust.beans.JreConfig.Companion.min
 import org.gradle.api.Project
 import org.gradle.api.plugins.ExtraPropertiesExtension
 import org.gradle.api.plugins.JavaPluginExtension
+import org.gradle.api.tasks.TaskContainer
 import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.kotlin.dsl.extra
+import java.io.File
 
 
 object JweustDefault {
@@ -25,13 +28,22 @@ internal inline fun Project.doIfAllow(key:String, crossinline block:()->Unit) {
 
 context(Project)
 internal fun JweustExtension.default() = doIfAllow(JweustDefault.ALL) {
-    doIfAllow(JweustDefault.NAME) {
-        rustProjectName = name.toSnackCase().takeIf { it.isNotBlank() }!!
+    val jarCurrent by lazy {
+        tasks.findJar().firstOrNull()
     }
     doIfAllow(JweustDefault.JAR) {
-        jar.default()?.let { doIfAllow(JweustDefault.NAME) {
+        jar.default(jarCurrent)
+    }
+    doIfAllow(JweustDefault.NAME) {
+        rustProjectName = jarCurrent?.name?.let {
             rustProjectName = it
-        } }
+            "-$version".let {suffix -> arrayOf("$suffix.jar","$suffix-all.jar") }.forEach {suffix ->
+                if (rustProjectName.endsWith(suffix))
+                    rustProjectName = rustProjectName.dropLast(suffix.length)
+            }
+            rustProjectName.takeIf { name -> name.isBlank() }
+        } ?: project.name
+        rustProjectName = rustProjectName.toSnackCase()
     }
     doIfAllow(JweustDefault.EXE) {
         exe.default()
@@ -44,25 +56,26 @@ internal fun JweustExtension.default() = doIfAllow(JweustDefault.ALL) {
     }
     logger.info("Jweust: default settings is done")
     logger.debug("Jweust: default, {}", this)
+    extra[JweustDefault.ALL] = false
 }
+private fun TaskContainer.findJar() = sequence {
+    findByName("shadowJar")?.run {
+        yieldAll(outputs.files.files)
+    } ?:findByName("jar")  ?.run {
+        yieldAll(outputs.files.files)
+    }
+}.filter { it.name.endsWith(".jar") }
 
 context(Project)
 @JvmName("defaultJarSettings")
-internal fun JarConfig.default():String? {
-    var jarName:String? = null
-    fun foundByOutputFiles(name:String) =
-        tasks.findByName(name)
-            ?.outputs?.files?.firstOrNull()?.name
-            ?.let {fileName ->
-                files = setOf(fileName)
-                jarName= fileName.removeSuffix(".jar")
-            }
-    if (files.isEmpty())
-    foundByOutputFiles("shadowJar") ?:
-    foundByOutputFiles("jar")
-    logger.info("Jweust: JAR default settings is done")
+internal fun JarConfig.default(file: File?):String? {
+    val fileName = file?.name
+    fileName?.let {
+        files += it
+    }
+    logger.info("Jweust: JAR default settings is done, named {}",fileName)
     logger.debug("Jweust: jar default, {}", this)
-    return jarName
+    return fileName
 }
 
 context(Project)
@@ -100,7 +113,7 @@ internal fun JreConfig.default() {
         logger.info("Jweust: JRE search env is empty, using default")
         searchEnv += JvmSearch.EnvVar("JAVA_HOME")
     }
-    if (version.isEmpty()) {
+    if (this.min == 0U) {
         logger.info("Jweust: JRE version is empty, searching")
         val jvm = extensions.findByType(JavaPluginExtension::class.java)
             ?.toolchain
@@ -116,6 +129,6 @@ internal fun JreConfig.default() {
             ?:
             11
         logger.info("Jweust: JRE version is $jvm")
-        version += jvm
+        min = jvm.toUInt()
     }
 }
