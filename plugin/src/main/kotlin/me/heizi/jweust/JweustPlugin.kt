@@ -22,6 +22,9 @@ class JweustPlugin: Plugin<Project> {
             JweustTask::class.java,
             extensions.getByType(JweustExtension::class.java)
         ).get().apply {
+            artifacts.add(EXTENSION_NAME,buildDir.resolve("jweust/${rustProjectName.replace('_','-')}.exe")) {
+                type = "exe"
+            }
             // fixme: flexible cache
             group = "jweust"
             description = "build exe from rust project after clone and parsed"
@@ -114,7 +117,7 @@ interface JweustExtension:JweustProjectExtension,JweustVarsExtension {
         @Suppress("NOTHING_TO_INLINE")
         internal inline operator fun invoke(project: Project):JweustExtension =
             object : JweustVarsExtension by JweustConfig(), JweustExtension {
-                override var jweustRoot: File = project.rootDir.resolve("jweust")
+                override var jweustRoot: File = project.rootProject.buildDir.resolve("tmp/jweust")
                 override var rustProjectVersion: String = project.version.toString().createValidatedVersionOf(3)
                 override fun toString(): String = "root=$jweustRoot,version=$rustProjectVersion,${asJwConfig}"
 

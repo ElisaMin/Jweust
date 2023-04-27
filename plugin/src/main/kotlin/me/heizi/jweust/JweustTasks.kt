@@ -156,9 +156,6 @@ internal interface JweustTasks: JweustProjectExtension {
         }.onSuccess {
             artifact.deleteOnExit()
         }.getOrDefault(artifact)
-        project.artifacts.add(JweustPlugin.EXTENSION_NAME,r) {
-            type = "exe"
-        }
         return r
     }
 
