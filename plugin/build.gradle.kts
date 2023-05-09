@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.kotlin)
     `kotlin-dsl`
     `maven-publish`
+//    alias(libs.plugins.compose) apply false
 }
 
 group = "me.heizi.gradle.plugins"
@@ -74,8 +75,8 @@ testing {
     }
 }
 gradlePlugin.testSourceSets(sourceSets["functionalTest"])
-//
-//tasks.named<Task>("check") {
-//    // Include functionalTest as part of the check lifecycle
-//    dependsOn(testing.suites.named("functionalTest"))
-//}
+
+tasks.named<Task>("check") {
+    // Include functionalTest as part of the check lifecycle
+    dependsOn(testing.suites.named("functionalTest"))
+}
