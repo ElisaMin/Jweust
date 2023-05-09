@@ -1,6 +1,7 @@
 package me.heizi.jweust
 
 import com.github.javaparser.utils.Utils.assertNotNull
+import me.heizi.jweust.tasks.git
 import org.gradle.api.Project
 import org.gradle.testfixtures.ProjectBuilder
 import kotlin.test.Test
@@ -33,8 +34,19 @@ class JweustPluginTest {
     private val task by lazy {
         project.tasks.withType(JweustTask::class.java).first()
     }
-    @Test fun `jweust parse`() {
-
+    @Test fun `jweust git`() {
+        with(project) {
+            jweust {
+                defaults()
+                jweustRoot = buildDir.resolve("../../jweust")
+                println(this)
+            }
+        }
+        runCatching {
+            task.git()
+        }.onFailure {
+            it.printStackTrace()
+        }
     }
 
     @Test fun `jweust tasks`() {
@@ -46,9 +58,10 @@ class JweustPluginTest {
             }
         }
         task.clone(task)
-        task.parse(task)
+        task.parse()
         task.build(task)
     }
+
 
 }
 

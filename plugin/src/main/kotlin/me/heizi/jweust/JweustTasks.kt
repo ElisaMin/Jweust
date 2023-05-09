@@ -27,12 +27,13 @@ internal interface JweustTasks: JweustProjectExtension {
         _logger.lifecycle("clone is done")
     }
 
-    fun parse(task: Task) {
-        parseVars()
-        parseToml()
-        if (jarForInclude != null)
-            parseInclude()
+    fun parse():Boolean {
+        val v = parseVars()
+        val p = parseToml()
+        val i = if (jarForInclude != null)
+            parseInclude() else false
         _logger.lifecycle("parse is done")
+        return v || p || i
     }
 
     fun build(task: Task) {
@@ -73,7 +74,8 @@ internal interface JweustTasks: JweustProjectExtension {
     }
 
 
-    fun parseVars() = jweustRoot.absoluteFile.resolve(FILE_WITH_DIR).apply {
+    fun parseVars() = jweustRoot.absoluteFile.resolve(FILE_WITH_DIR).run {
+        val o = takeIf { exists() }?.readText()
         FileWriter(this, false).use {
             it.write(rustConfig)
             it.flush()
@@ -82,9 +84,10 @@ internal interface JweustTasks: JweustProjectExtension {
         require(parsed.lines().size>29) {
             "is not valid rust config\n$parsed"
         }
+        parsed != o
     }
-    fun parseInclude() = jweustRoot.absoluteFile.resolve("src/includes").apply {
-
+    fun parseInclude() = jweustRoot.absoluteFile.resolve("src/includes").run {
+        val o = readText()
         var lineForReplace = buildString {
             append("        ") // yes. tabs.
             append("include_bytes!(")
@@ -98,7 +101,7 @@ internal interface JweustTasks: JweustProjectExtension {
 
              var writingSwitch = false
 
-             readLines().forEach { with(it) {
+             o.lines().forEach { with(it) {
 
                  if (endsWith("//jweust-include-jar-start")) {
                      writingSwitch = true
@@ -120,6 +123,7 @@ internal interface JweustTasks: JweustProjectExtension {
             it.write(content)
             it.flush()
         }
+        o != readText()
     }
     @Suppress("NOTHING_TO_INLINE")
     private inline fun List<String>.lineDiff(index: Int, name: String, to:String): String? {
@@ -129,12 +133,13 @@ internal interface JweustTasks: JweustProjectExtension {
             "$name = \"$to\""
         }.takeIf { it!=oLine }
     }
-    fun parseToml() = jweustRoot.absoluteFile.resolve("Cargo.toml").apply {
-        val o = readText().lines()
-        val (name,version) = o.run {
+    fun parseToml() = jweustRoot.absoluteFile.resolve("Cargo.toml").run {
+        val o = readText()
+        val linesO = o.lines()
+        val (name,version) = linesO.run {
             lineDiff(1,"name",rustProjectName) to lineDiff(2,"version",rustProjectVersion)
         }
-        if (name!=null || version!=null ) o.toMutableList().apply {
+        if (name!=null || version!=null ) linesO.toMutableList().apply {
             name?.let { this[1] = it }
             version?.let { this[2] = it }
         }.joinToString("\n").let { s->
@@ -143,6 +148,7 @@ internal interface JweustTasks: JweustProjectExtension {
                 it.flush()
             }
         }
+        o != readText()
     }
     @OptIn(ExperimentalApiReShell::class)
     fun buildRust() = runBlocking {

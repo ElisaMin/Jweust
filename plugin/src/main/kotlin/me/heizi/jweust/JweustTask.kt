@@ -53,7 +53,7 @@ open class JweustTask @Inject constructor (
             clone(this)
         }
         doLast("parse") {
-            parse(this)
+            parse()
         }
         doLast("build") {
             build(this)
