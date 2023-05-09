@@ -23,14 +23,20 @@ open class JweustTask @Inject constructor (
     override val rustConfig: String
         @Internal
         get() = asJwConfig.getRustFile()
-    override val jarForInclude: File? get() =
-        hashOfIncludeJar?.trim()?.takeIf {
-            it.isNotEmpty() && it != "@|/dev/jweust_enable_jar_include_but_later_init"
-        }?.let { _ -> with(jar) {
-            launcher?.file?.let {
-                files.toTypedArray().getOrNull(it)
-            }?.let(::File)
-        }} // 很没必要的写法
+    override val jarForInclude: File? get() {
+        // null check or embedding is enabled
+        hashOfIncludeJar
+            ?.trim()
+            ?.takeIf { with(it) {
+                isNotEmpty() &&
+                !equals("@|/dev/jweust_enable_jar_include_but_later_init")
+            } }
+            ?: return null
+
+        return jar.launcher?.file // index ?
+            ?.let { index -> jar.files.toTypedArray().getOrNull(index) }
+            ?.let(::File)
+    }
 
     companion object {
         const val NAME = "jweust"
