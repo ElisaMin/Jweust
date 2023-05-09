@@ -1,13 +1,11 @@
 package me.heizi.jweust
 
 import me.heizi.jweust.JweustVarsExtension.Companion.asJwConfig
-import me.heizi.jweust.beans.JweustDefault
-import me.heizi.jweust.beans.allow
-import me.heizi.jweust.beans.default
-import me.heizi.jweust.beans.getRustFile
+import me.heizi.jweust.beans.*
 import org.gradle.api.DefaultTask
 import org.gradle.api.logging.Logger
 import org.gradle.api.tasks.Internal
+import org.gradle.kotlin.dsl.extra
 import java.io.File
 import javax.inject.Inject
 
@@ -37,6 +35,13 @@ open class JweustTask @Inject constructor (
             ?.let { index -> jar.files.toTypedArray().getOrNull(index) }
             ?.let(::File)
     }
+
+    override fun getExtra(key: String): Any? {
+        return project.extra.getOrNull(key)
+    }
+
+
+
 
     companion object {
         const val NAME = "jweust"

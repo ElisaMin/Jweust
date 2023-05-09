@@ -3,6 +3,7 @@ package me.heizi.jweust
 import com.github.javaparser.utils.Utils.assertNotNull
 import me.heizi.jweust.tasks.git
 import org.gradle.api.Project
+import org.gradle.kotlin.dsl.extra
 import org.gradle.testfixtures.ProjectBuilder
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -41,6 +42,7 @@ class JweustPluginTest {
                 jweustRoot = buildDir.resolve("../../jweust")
                 println(this)
             }
+            extra["jweust.git.fetch"] = false
         }
         runCatching {
             task.git()

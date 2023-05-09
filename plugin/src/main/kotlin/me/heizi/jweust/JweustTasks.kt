@@ -17,6 +17,7 @@ internal interface JweustTasks: JweustProjectExtension {
     val _logger: Logger
     val rustProjectName:String
     val jarForInclude:File?
+    fun getExtra(key:String):Any?
 
     fun clone(task: Task) {
         checkCloneDirsWithReason()?.let {
@@ -32,7 +33,6 @@ internal interface JweustTasks: JweustProjectExtension {
         val p = parseToml()
         val i = if (jarForInclude != null)
             parseInclude() else false
-        _logger.lifecycle("parse is done")
         return v || p || i
     }
 
