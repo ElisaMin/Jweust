@@ -2,6 +2,7 @@ package me.heizi.jweust.tasks
 
 import kotlinx.coroutines.runBlocking
 import me.heizi.jweust.JweustTasks
+import me.heizi.jweust.tasks.Git.throws
 import me.heizi.kotlinx.shell.*
 import java.io.File
 import java.io.IOException
@@ -57,7 +58,7 @@ internal fun JweustTasks.nextStateOf(state:String):String? = when(state) {
                 .resolve("HEAD").takeIf { it.exists() }!!
                 .readText()
                 .lines()
-                .first()
+                .first { it.isNotEmpty() }
             require(head.startsWith("ref: refs/heads/")) {
                 "jweust is not on a branch\n|$head|"
             }
@@ -84,8 +85,23 @@ internal fun JweustTasks.nextStateOf(state:String):String? = when(state) {
         else "tag-is-current"
     }
     "tag-deprecated"   -> {
-        _logger.error("tag is deprecated, please clean ${jweustRoot.absolutePath} after versions updated")
-        "merge-to-tag"
+        _logger.warn("jweust version ${Git.repoTag} is deprecated, please update your jweust to current version ${Git.latestTag} " +
+                "you can clean the path after you update: ${jweustRoot.absolutePath} .\n" +
+                ""
+        )
+        "checking-header-is-merged-tag"
+    }
+    "checking-header-is-merged-tag"-> {
+        Git branch "--contains ${Git.repoTag}"
+        val contained = Git.latestResult.runCatching {
+            throws().message.lines().
+            map { it.trim('*',' ') }.contains(rustProjectName)
+        }.onFailure {
+            it.printStackTrace()
+        }.getOrNull() == true
+        if (!contained)
+            "merge-to-tag"
+        else "merged"
     }
     "merge-to-tag"  -> {
         Git merge "tags/${Git.repoTag}"
@@ -94,6 +110,7 @@ internal fun JweustTasks.nextStateOf(state:String):String? = when(state) {
                     "after that, please run this task again. the path is ${jweustRoot.absolutePath} . "
         )
     }
+    "merged" -> "parse"
     "tag-is-current" -> "parse"
     "parse" -> if(parse()) "commit" else "done"
     "commit" -> {
@@ -113,9 +130,14 @@ internal fun JweustTasks.nextStateOf(state:String):String? = when(state) {
 
 
 private object Git {
+
     const val repoTag = "0.0.1"
-    @Suppress("NAME_SHADOWING")
+
     val isTagDeprecated: Boolean by lazy {
+        latestTag != repoTag
+    }
+    @Suppress("NAME_SHADOWING")
+    val latestTag by lazy {
         tag().sortedWith { o1, o2 ->
             val o1 = o1.split(".").map { it.toIntOrNull() ?: 0 }
             val o2 = o2.split(".").map { it.toIntOrNull() ?: 0 }
@@ -124,7 +146,7 @@ private object Git {
                     return@sortedWith o1[i].compareTo(o2[i])
             }
             255
-        }.last() != repoTag
+        }.last()
     }
 
     const val repo = "git@github.com:ElisaMin/Jweust-template.git"
@@ -144,7 +166,7 @@ private object Git {
             throw IllegalStateException("git failed",it)
         }
     }
-    private fun CommandResult.throws(): CommandResult.Success {
+    fun CommandResult.throws(): CommandResult.Success {
         latestResult = this
         if (this is CommandResult.Failed){
             val err = "$processingMessage\n$errorMessage"
@@ -192,7 +214,7 @@ private object Git {
     ).await()
 
     fun fetch() = wrapper {
-        "git fetch"()
+        "git fetch --all --tags"()
     }
 
     infix fun branch(branchName: String) = wrapper {
