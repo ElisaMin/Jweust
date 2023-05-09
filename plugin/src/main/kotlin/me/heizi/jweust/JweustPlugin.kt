@@ -11,7 +11,6 @@ import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.kotlin.dsl.extra
 import java.io.File
-import java.security.MessageDigest
 
 
 class JweustPlugin: Plugin<Project> {
@@ -63,6 +62,7 @@ interface JweustProjectExtension {
  */
 interface JweustVarsExtension {
     @get:Input
+    @get:Optional
     var hashOfIncludeJar: String?
     @get:Input
     var rustProjectName:String
@@ -108,6 +108,7 @@ interface JweustVarsExtension {
         var JweustVarsExtension.embedJar: Boolean
             get() = hashOfIncludeJar?.takeIf { it.isNotBlank() } != null;
             set(embed) {
+
                 if (!embed) hashOfIncludeJar = null
                 else { includeJarByGenerate() }
         }
@@ -116,20 +117,7 @@ interface JweustVarsExtension {
         hashOfIncludeJar = hash
     }
     fun includeJarByGenerate() {
-        val jar = jar.files
-            .toTypedArray()
-            .getOrNull(jar.launcher?.file?:0)
-            ?.let(::File)
-            ?.takeIf { it.exists() }
-            ?: throw NullPointerException("launcher jar not found")
-
-        hashOfIncludeJar = MessageDigest.getInstance("SHA-256").runCatching {
-            digest(
-                jar.readBytes()
-            ).joinToString("") {
-                "%02x".format(it)
-            }
-        }.getOrDefault(jar.hashCode().toString())
+        hashOfIncludeJar = "@|/dev/jweust_enable_jar_include_but_later_init"
     }
 
 }

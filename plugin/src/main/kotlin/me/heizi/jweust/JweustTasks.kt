@@ -16,6 +16,7 @@ internal interface JweustTasks: JweustProjectExtension {
     @Suppress("PropertyName")
     val _logger: Logger
     val rustProjectName:String
+    val jarForInclude:File?
 
     fun clone(task: Task) {
         checkCloneDirsWithReason()?.let {
@@ -27,7 +28,10 @@ internal interface JweustTasks: JweustProjectExtension {
     }
 
     fun parse(task: Task) {
-        arrayOf(parseVars(),parseToml())
+        parseVars()
+        parseToml()
+        if (jarForInclude != null)
+            parseInclude()
         _logger.lifecycle("parse is done")
     }
 
@@ -77,6 +81,44 @@ internal interface JweustTasks: JweustProjectExtension {
         val parsed = readText()
         require(parsed.lines().size>29) {
             "is not valid rust config\n$parsed"
+        }
+    }
+    fun parseInclude() = jweustRoot.absoluteFile.resolve("src/includes").apply {
+
+        var lineForReplace = buildString {
+            append("        ") // yes. tabs.
+            append("include_bytes!(")
+            append('"')
+            append(jarForInclude!!.absolutePath.replace("\\", "\\\\"))
+            append('"')
+            append(");")
+        }
+
+         val content = buildString {
+
+             var writingSwitch = false
+
+             readLines().forEach { with(it) {
+
+                 if (endsWith("//jweust-include-jar-start")) {
+                     writingSwitch = true
+                 }
+                 if (endsWith("//jweust-include-jar-end")) {
+                     writingSwitch = false
+                 }
+                 if (writingSwitch) {
+                     appendLine(lineForReplace)
+                     lineForReplace = "        "
+                 } else {
+                     appendLine(this)
+                 }
+             } }
+
+        }
+
+        FileWriter(this, false).use {
+            it.write(content)
+            it.flush()
         }
     }
     @Suppress("NOTHING_TO_INLINE")

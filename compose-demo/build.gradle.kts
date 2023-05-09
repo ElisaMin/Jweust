@@ -31,6 +31,7 @@ kotlin {
 
 compose.desktop {
     application {
+        // not working anyways
         mainClass = "MainKt"
 //        nativeDistributions {
 //            targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
@@ -43,6 +44,13 @@ compose.desktop {
 jweust {
     defaults()
     tasks.shadowJar {
+        this.manifest {
+            this.attributes["Main-Class"] = "MainKt"
+        }
         jar.files = setOf(outputs.files.files.first().canonicalPath)
+    }
+    charset {
+        this.pageCode = "65001"
+        this.stdout = "GBK"
     }
 }

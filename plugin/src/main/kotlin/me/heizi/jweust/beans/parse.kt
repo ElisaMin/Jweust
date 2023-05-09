@@ -1,6 +1,7 @@
 package me.heizi.jweust.beans
 
 import org.gradle.api.tasks.Internal
+import java.io.File
 import java.io.Serializable
 import kotlin.reflect.*
 import kotlin.reflect.full.isSubclassOf
@@ -26,6 +27,39 @@ internal fun JweustConfig.getRustFile():String {
     exe {
         productVersion = productVersion.createValidatedVersionOf(4)
         fileVersion = fileVersion.createValidatedVersionOf(4)
+    }
+    if (hashOfIncludeJar == "@|/dev/jweust_enable_jar_include_but_later_init") {
+
+        fun sha256(file: File):String {
+            val digest = java.security.MessageDigest.getInstance("SHA-256")
+            val fis = file.inputStream()
+            val buffer = ByteArray(1024)
+            var numRead = fis.read(buffer)
+            while (numRead != -1) {
+                digest.update(buffer, 0, numRead)
+                numRead = fis.read(buffer)
+            }
+            fis.close()
+            return digest.digest().joinToString("") { "%02x".format(it) }
+        }
+
+
+        jar.files.toTypedArray()
+
+            .getOrNull(jar.launcher?.file?:0)
+            ?.let(::File)
+
+            ?.takeIf { it.exists() }
+
+            ?.let(::sha256)
+
+            ?.let {
+                hashOfIncludeJar = it
+            }
+
+            ?: throw NullPointerException(
+                "jar embedding is enabling but launcher jar not found in ${jar.files}, plz specify hashOfIncludeJar by includeJarById or compile the jar first"
+            )
     }
 
     return arrayOf(
