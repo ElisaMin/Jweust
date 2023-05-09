@@ -11,6 +11,7 @@ import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.kotlin.dsl.extra
 import java.io.File
+import java.security.MessageDigest
 
 
 class JweustPlugin: Plugin<Project> {
@@ -62,6 +63,8 @@ interface JweustProjectExtension {
  */
 interface JweustVarsExtension {
     @get:Input
+    var hashOfIncludeJar: String?
+    @get:Input
     var rustProjectName:String
     @get:Input
     var applicationType: ApplicationType
@@ -101,10 +104,35 @@ interface JweustVarsExtension {
         charset = charset.apply(block)
     }
     companion object {
-        internal inline val JweustVarsExtension.asJwConfig get() = JweustConfig(rustProjectName,applicationType,workdir, log,exe,jar,jre,charset,splashScreen)
+        internal inline val JweustVarsExtension.asJwConfig get() = JweustConfig(hashOfIncludeJar,rustProjectName,applicationType,workdir, log,exe,jar,jre,charset,splashScreen)
+        var JweustVarsExtension.embedJar: Boolean
+            get() = hashOfIncludeJar?.takeIf { it.isNotBlank() } != null;
+            set(embed) {
+                if (!embed) hashOfIncludeJar = null
+                else { includeJarByGenerate() }
+        }
     }
-}
+    fun includeJarById(hash:String) {
+        hashOfIncludeJar = hash
+    }
+    fun includeJarByGenerate() {
+        val jar = jar.files
+            .toTypedArray()
+            .getOrNull(jar.launcher?.file?:0)
+            ?.let(::File)
+            ?.takeIf { it.exists() }
+            ?: throw NullPointerException("launcher jar not found")
 
+        hashOfIncludeJar = MessageDigest.getInstance("SHA-256").runCatching {
+            digest(
+                jar.readBytes()
+            ).joinToString("") {
+                "%02x".format(it)
+            }
+        }.getOrDefault(jar.hashCode().toString())
+    }
+
+}
 
 /**
  * unnecessary override

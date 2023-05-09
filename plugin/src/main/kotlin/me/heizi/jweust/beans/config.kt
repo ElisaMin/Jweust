@@ -43,6 +43,7 @@ data class SplashScreenConfig(
 
 data class JweustConfig(
 //    var includeJar: Boolean = false,
+    override var hashOfIncludeJar: String? = null,
     override var rustProjectName:String = "",
     // pub const APPLICATION_WITH_OUT_CLI:Option<Option<&'static str>> = Some(Some("-DConsolog=true"));
     @RustParsable.Name("APPLICATION_WITH_OUT_CLI")
