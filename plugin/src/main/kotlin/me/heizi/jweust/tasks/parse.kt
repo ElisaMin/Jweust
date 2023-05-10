@@ -27,7 +27,7 @@ internal fun JweustTasks.ignoreRemoveVarRs()
 }
 
 internal fun JweustTasks.updateIncludeRs()
-= if (jarForInclude==null) false else changeOrWrite("src/include.rs") {
+= if (jarForInclude==null) false else changeOrWrite("src/includes.rs") {
     asInclude(jarForInclude!!)
 }
 internal fun JweustTasks.updateOrCreateVarRs()
@@ -54,27 +54,29 @@ private fun String.asInclude(
     }
     if (lineForReplace in this) return null
 
-    return buildString {
+    val lines = lines()
+    var writingSwitch: Boolean? = false
 
-        var writingSwitch = false
+    return buildString { for (line in lines) {
 
-        lines().forEach { with(it) {
+        if (line.endsWith("//jweust-include-jar-start")) {
+            writingSwitch = true
+            appendLine(line)
+            continue
+        }
 
-            if (endsWith("//jweust-include-jar-start")) {
-                writingSwitch = true
-            }
-            if (endsWith("//jweust-include-jar-end")) {
-                writingSwitch = false
-            }
-            if (writingSwitch) {
-                appendLine(lineForReplace)
-                lineForReplace = "        "
-            } else {
-                appendLine(this)
-            }
-        } }
+        if (line.endsWith("//jweust-include-jar-end")) {
+            writingSwitch = false
+        }
 
-    }.takeIf { it!=this }
+        if (writingSwitch==true) {
+            appendLine(lineForReplace)
+            lineForReplace = "        "
+        } else {
+            appendLine(line)
+        }
+
+    } }.takeIf { it!=this }
 
 }
 
