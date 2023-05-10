@@ -48,7 +48,7 @@ internal fun JweustTasks.generateValidatedRustProject() {
  * @see generateValidatedRustProject
  */
 private fun JweustTasks.nextStateOf(state:String):String? = when(state) {
-    "started" -> if (!jweustRoot.exists()) "clone" else {
+    "started" -> if (!hashRepo)  "clone" else {
         Git.root = jweustRoot
         Git.isRepoOrThrows()
         Git checkout "main"
@@ -240,19 +240,50 @@ private object Git {
         }
         val files = root.listFiles().takeIf { it?.isNotEmpty() == true }
         require(files!=null) {
-            "jweust root must not be empty"
+            "jweust root must not be empty : ${root.absolutePath}"
         }
         val git = files.find { it.name == ".git" }
         require(
             git!=null && git.isDirectory
                     && git.listFiles()?.isNotEmpty() == true
         )  {
-            "jweust root must be a git repository"
+            "jweust root must be a git repository : ${root.absolutePath}"
         }
     }
 
 }
 
+private val JweustTasks.hashRepo: Boolean get() = jweustRoot.run has@{
+
+    if (!exists()&&!isDirectory) return@has false
+    val fileNames = listFiles()?.takeIf { it.isNotEmpty() }?.map { it.name }
+
+    val deleteAndThrow = {
+        if (!delete()) {
+            throw IOException("jweust root is not a directory and can't be deleted")
+        }
+    }
+
+    if (fileNames==null) {
+        deleteAndThrow()
+        return@has false
+    }
+
+    val hasRepo = fileNames.size>5
+            && "LICENSE" in fileNames
+            && ".git" in fileNames
+
+    if (hasRepo) return@has true
+
+    if (getExtra("jweust.root-files.delete-always") != true ) {
+        deleteAndThrow()
+        return@has false
+    }
+    error("jweust root must be empty or contains only .git folder,but it contains ${fileNames.joinToString()}. " +
+            "but somehow, you can set jweust.root-files.delete-always to true to delete it automatically ."
+    )
+
+}
 private val JweustTasks.isDeprecatedWarnDspIng: Boolean
     get() = getExtra("jweust.git.deprecated.warn") != false
 private val JweustTasks.isUpdateTag: Boolean
