@@ -20,6 +20,7 @@ internal interface JweustTasks: JweustProjectExtension {
     fun getExtra(key:String):Any?
 
     fun build(task: Task) {
+        _logger.lifecycle("> Task :jweust:build: start")
         buildRust()
         with(task) {
             setArtifact(searchExe())
@@ -29,15 +30,16 @@ internal interface JweustTasks: JweustProjectExtension {
 
     @OptIn(ExperimentalApiReShell::class)
     fun buildRust() = runBlocking {
+        _logger.lifecycle("> Task :jweust:build: building")
         ReShell(
             "cargo build --release",
             workdir = jweustRoot,
             environment = mapOf("`RUST_BACKTRACE`" to "1")
         ).map { it.also {
             when (it) {
-                is Signal.Output -> _logger.info(it.message)
-                is Signal.Error -> _logger.error(it.message)
-                is Signal.Code -> _logger.info("Exit code: ${it.code}")
+                is Signal.Output -> _logger.lifecycle("> Task :jweust:build: ${it.message}")
+                is Signal.Error -> _logger.warn("> ${it.message}")
+                is Signal.Code -> _logger.lifecycle("> Exit code: ${it.code}")
                 else -> Unit
             }
         } }.await().apply {
