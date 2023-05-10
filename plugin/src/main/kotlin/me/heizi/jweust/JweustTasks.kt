@@ -2,17 +2,18 @@ package me.heizi.jweust
 
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.runBlocking
+import me.heizi.jweust.beans.JweustConfig
+import me.heizi.jweust.tasks.updateFiles
 import me.heizi.kotlinx.shell.*
 import org.gradle.api.Task
 import org.gradle.api.logging.Logger
 import java.io.File
-import java.io.FileWriter
 import java.io.IOException
 
 
 internal interface JweustTasks: JweustProjectExtension {
 
-    val rustConfig: String
+    val varKt:JweustConfig
     @Suppress("PropertyName")
     val _logger: Logger
     val rustProjectName:String
@@ -29,11 +30,7 @@ internal interface JweustTasks: JweustProjectExtension {
     }
 
     fun parse():Boolean {
-        val v = parseVars()
-        val p = parseToml()
-        val i = if (jarForInclude != null)
-            parseInclude() else false
-        return v || p || i
+        return updateFiles()
     }
 
     fun build(task: Task) {
@@ -73,83 +70,6 @@ internal interface JweustTasks: JweustProjectExtension {
         }
     }
 
-
-    fun parseVars() = jweustRoot.absoluteFile.resolve(FILE_WITH_DIR).run {
-        val o = takeIf { exists() }?.readText()
-        FileWriter(this, false).use {
-            it.write(rustConfig)
-            it.flush()
-        }
-        val parsed = readText()
-        require(parsed.lines().size>29) {
-            "is not valid rust config\n$parsed"
-        }
-        parsed != o
-    }
-    fun parseInclude() = jweustRoot.absoluteFile.resolve("src/includes").run {
-        val o = readText()
-        var lineForReplace = buildString {
-            append("        ") // yes. tabs.
-            append("include_bytes!(")
-            append('"')
-            append(jarForInclude!!.absolutePath.replace("\\", "\\\\"))
-            append('"')
-            append(");")
-        }
-
-         val content = buildString {
-
-             var writingSwitch = false
-
-             o.lines().forEach { with(it) {
-
-                 if (endsWith("//jweust-include-jar-start")) {
-                     writingSwitch = true
-                 }
-                 if (endsWith("//jweust-include-jar-end")) {
-                     writingSwitch = false
-                 }
-                 if (writingSwitch) {
-                     appendLine(lineForReplace)
-                     lineForReplace = "        "
-                 } else {
-                     appendLine(this)
-                 }
-             } }
-
-        }
-
-        FileWriter(this, false).use {
-            it.write(content)
-            it.flush()
-        }
-        o != readText()
-    }
-    @Suppress("NOTHING_TO_INLINE")
-    private inline fun List<String>.lineDiff(index: Int, name: String, to:String): String? {
-        val regex = Regex("$name = \"(.+)\"")
-        val oLine = this[index]
-        return this[index].replace(regex){
-            "$name = \"$to\""
-        }.takeIf { it!=oLine }
-    }
-    fun parseToml() = jweustRoot.absoluteFile.resolve("Cargo.toml").run {
-        val o = readText()
-        val linesO = o.lines()
-        val (name,version) = linesO.run {
-            lineDiff(1,"name",rustProjectName) to lineDiff(2,"version",rustProjectVersion)
-        }
-        if (name!=null || version!=null ) linesO.toMutableList().apply {
-            name?.let { this[1] = it }
-            version?.let { this[2] = it }
-        }.joinToString("\n").let { s->
-            FileWriter(this, false).use {
-                it.write(s)
-                it.flush()
-            }
-        }
-        o != readText()
-    }
     @OptIn(ExperimentalApiReShell::class)
     fun buildRust() = runBlocking {
         ReShell(
@@ -205,10 +125,5 @@ internal interface JweustTasks: JweustProjectExtension {
             artifact.deleteOnExit()
         }.getOrDefault(artifact)
         return r
-    }
-
-
-    companion object {
-        private const val FILE_WITH_DIR = "src/var.rs"
     }
 }

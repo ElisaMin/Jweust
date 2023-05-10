@@ -58,6 +58,9 @@ private fun JweustTasks.nextStateOf(state:String):String? = when(state) {
         else "checkout-branch"
     }
     "new-branch-created" -> {
+        ignoreRemoveVarRs()
+        Git add "."
+        Git commit "init $rustProjectName"
         "checkout-branch"
     }
     "checkout-branch" -> {

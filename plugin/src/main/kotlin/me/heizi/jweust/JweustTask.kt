@@ -18,9 +18,8 @@ open class JweustTask @Inject constructor (
     override val _logger: Logger
         @Internal
         get() = super.getLogger()
-    override val rustConfig: String
-        @Internal
-        get() = asJwConfig.getRustFile()
+    override val varKt: JweustConfig
+        get() = asJwConfig
     override val jarForInclude: File? get() {
         // null check or embedding is enabled
         hashOfIncludeJar

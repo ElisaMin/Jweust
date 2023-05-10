@@ -1,6 +1,7 @@
 package me.heizi.jweust.beans
 
 import me.heizi.jweust.beans.JreConfig.Companion.min
+import me.heizi.jweust.tasks.getRustFile
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
