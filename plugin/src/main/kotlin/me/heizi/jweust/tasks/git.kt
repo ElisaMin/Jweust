@@ -23,7 +23,7 @@ import java.io.IOException
  *                        -> throw exception -> x
  *                           (restart task) -> merged -> parse
  *
- * no-merge-problem -> skip-fetch -> parse
+ * no-merge-problem -> skip-update-tag -> parse
  *                  # updating
  *                  -> fetching -> checking-tags -> tag-is-current -> parse
  *                                 checking-tags -> tag-deprecated
@@ -45,20 +45,9 @@ internal fun JweustTasks.generateValidatedRustProject() {
 /**
  * check the stage of jweust git repo and manage it, for saving the result of rust project or update.
  *
- * actions:
- *
- * - clone repo or fetch
- * - check the latest tag and compare it with local tag.  @main branch
- * - checkout or create a branch for subproject by name.
- * - parse files and commit if its creating or parsed file has changed.
- * - check tag of branch if it's deprecated
- * - merge branch to tag
- *
- * - merge before :: human visiting required
- * - checkout
- * ...
+ * @see generateValidatedRustProject
  */
-internal fun JweustTasks.nextStateOf(state:String):String? = when(state) {
+private fun JweustTasks.nextStateOf(state:String):String? = when(state) {
     "started" -> if (!jweustRoot.exists()) "clone" else {
         Git.root = jweustRoot
         Git.isRepoOrThrows()
@@ -83,7 +72,7 @@ internal fun JweustTasks.nextStateOf(state:String):String? = when(state) {
         "no-merge-problem"
     }
     "no-merge-problem" -> {
-        if (isSkipFetch) "skip-fetch" else "fetching"
+        if (isUpdateTag) "skip-update-tag" else "fetching"
     }
     "fetching" -> {
         Git.fetch()
@@ -95,10 +84,10 @@ internal fun JweustTasks.nextStateOf(state:String):String? = when(state) {
         else "tag-is-current"
     }
     "tag-deprecated"   -> {
-        if (isDeprecatedWarnDspIng)
-        _logger.warn("jweust version ${Git.currentTag} is deprecated, please update your jweust to current version ${Git.latestTag} " +
+        if (isDeprecatedWarnDspIng) _logger.warn(
+            "jweust version ${Git.currentTag} is deprecated, please update your jweust to current version ${Git.latestTag} " +
                 "you can clean the path after you update: `${jweustRoot.absolutePath}` .\n" +
-                "also you can disable new version checking by setting ext `jweust.git.fetch`as `false` in your project.\n" +
+                "also you can disable new version checking by setting ext `jweust.git.update-tag`as `false` in your project.\n" +
                 "to disable this warning, please set ext `jweust.git.deprecated.warn` as `false` in your project."
         )
         "checking-header-is-merged-tag"
@@ -123,7 +112,7 @@ internal fun JweustTasks.nextStateOf(state:String):String? = when(state) {
         )
     }
     "merged" -> "parse"
-    "skip-fetch" -> "parse"
+    "skip-update-tag" -> "parse"
     "tag-is-current" -> "parse"
     "parse" -> if(parse()) "commit" else "done"
     "commit" -> {
@@ -263,7 +252,7 @@ private object Git {
 
 private val JweustTasks.isDeprecatedWarnDspIng: Boolean
     get() = getExtra("jweust.git.deprecated.warn") != false
-private val JweustTasks.isSkipFetch: Boolean
-    get() = getExtra("jweust.git.fetch") == false
+private val JweustTasks.isUpdateTag: Boolean
+    get() = getExtra("jweust.git.update-tag") != false
 private inline val CommandResult.isSucceed: Boolean
     get () = this is CommandResult.Success
