@@ -2,6 +2,7 @@ package me.heizi.jweust
 
 import me.heizi.jweust.JweustVarsExtension.Companion.asJwConfig
 import me.heizi.jweust.beans.*
+import me.heizi.jweust.tasks.generateValidatedRustProject
 import org.gradle.api.DefaultTask
 import org.gradle.api.logging.Logger
 import org.gradle.api.tasks.Internal
@@ -53,11 +54,8 @@ open class JweustTask @Inject constructor (
                     default()
                 }
         }
-        doFirst("clone") {
-            clone(this)
-        }
-        doLast("parse") {
-            parse()
+        doFirst("update") {
+            generateValidatedRustProject()
         }
         doLast("build") {
             build(this)

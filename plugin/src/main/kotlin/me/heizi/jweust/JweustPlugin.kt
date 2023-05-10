@@ -46,8 +46,7 @@ interface JweustProjectExtension {
     /**
      * defined a root path to build the exe from jweust rust project and its same dir as clone tasks
      *
-     * @see JweustTasks.clone
-     * @see JweustTasks.checkCloneDirsWithReason
+     * @see [me.heizi.jweust.tasks.generateValidatedRustProject]
      */
     @get:OutputDirectory
     var jweustRoot:File

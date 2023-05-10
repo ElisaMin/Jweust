@@ -117,7 +117,7 @@ private fun JweustTasks.nextStateOf(state:String):String? = when(state) {
     "merged" -> "parse"
     "skip-update-tag" -> "parse"
     "tag-is-current" -> "parse"
-    "parse" -> if(parse()) "commit" else "done"
+    "parse" -> if(updateFiles()) "commit" else "done"
     "commit" -> {
         Git add "."
         Git commit "update ${System.nanoTime()}"
