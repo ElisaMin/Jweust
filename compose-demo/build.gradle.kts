@@ -13,7 +13,10 @@ dependencies {
 repositories {
     mavenCentral()
     maven("https://maven.pkg.jetbrains.space/public/p/compose/dev")
-    `use heizi's maven repo by github`()
+    mavenLocal()
+    maven {
+        url = uri("https://raw.githubusercontent.com/ElisaMin/Maven/master/")
+    }
 }
 
 group = "me.heizi.jweust.demo.compose"
@@ -39,6 +42,10 @@ compose.desktop {
 //            packageVersion = "1.0.0"
 //        }
     }
+}
+tasks.build {
+    // invoke root project's task jar before build
+    dependsOn(":jweust:jar", ":jweust:publishToMavenLocal")
 }
 
 jweust {
