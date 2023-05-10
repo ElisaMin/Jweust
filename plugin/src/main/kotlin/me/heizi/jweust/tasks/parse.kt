@@ -1,6 +1,7 @@
 package me.heizi.jweust.tasks
 
 import me.heizi.jweust.JweustTasks
+import me.heizi.jweust.JweustVarsExtension.Companion.includeEnabledBut
 import me.heizi.jweust.beans.*
 import java.io.File
 
@@ -111,8 +112,7 @@ internal fun JweustConfig.getRustFile():String {
         productVersion = productVersion.createValidatedVersionOf(4)
         fileVersion = fileVersion.createValidatedVersionOf(4)
     }
-    if (hashOfIncludeJar == "@|/dev/jweust_enable_jar_include_but_later_init") {
-
+    if (hashOfIncludeJar == includeEnabledBut) {
         fun sha256(file: File):String {
             val digest = java.security.MessageDigest.getInstance("SHA-256")
             val fis = file.inputStream()

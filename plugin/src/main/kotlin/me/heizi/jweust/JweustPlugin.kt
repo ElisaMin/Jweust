@@ -60,6 +60,14 @@ interface JweustProjectExtension {
  * @see JweustConfig
  */
 interface JweustVarsExtension {
+    /**
+     * Embed jar into exe file, it's enabled by default.
+     *
+     * The hash will be generated at tasks runtime by reading the jar file, please specify an
+     * **absolute path** .
+     * @see [me.heizi.jweust.beans.JarConfig]
+     * Set it as `Null` to disable embedding.
+     */
     @get:Input
     @get:Optional
     var hashOfIncludeJar: String?
@@ -104,21 +112,14 @@ interface JweustVarsExtension {
     }
     companion object {
         internal inline val JweustVarsExtension.asJwConfig get() = JweustConfig(hashOfIncludeJar,rustProjectName,applicationType,workdir, log,exe,jar,jre,charset,splashScreen)
-        var JweustVarsExtension.embedJar: Boolean
-            get() = hashOfIncludeJar?.takeIf { it.isNotBlank() } != null;
-            set(embed) {
-
-                if (!embed) hashOfIncludeJar = null
-                else { includeJarByGenerate() }
-        }
+        const val includeEnabledBut = "*"
     }
     fun includeJarById(hash:String) {
         hashOfIncludeJar = hash
     }
     fun includeJarByGenerate() {
-        hashOfIncludeJar = "@|/dev/jweust_enable_jar_include_but_later_init"
+        hashOfIncludeJar = includeEnabledBut
     }
-
 }
 
 /**

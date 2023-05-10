@@ -1,6 +1,7 @@
 package me.heizi.jweust
 
 import me.heizi.jweust.JweustVarsExtension.Companion.asJwConfig
+import me.heizi.jweust.JweustVarsExtension.Companion.includeEnabledBut
 import me.heizi.jweust.beans.*
 import me.heizi.jweust.tasks.generateValidatedRustProject
 import org.gradle.api.DefaultTask
@@ -28,7 +29,7 @@ open class JweustTask @Inject constructor (
             ?.trim()
             ?.takeIf { with(it) {
                 isNotEmpty() &&
-                !equals("@|/dev/jweust_enable_jar_include_but_later_init")
+                !equals(includeEnabledBut)
             } }
             ?: return null
 

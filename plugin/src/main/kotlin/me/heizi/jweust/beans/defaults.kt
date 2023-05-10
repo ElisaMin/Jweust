@@ -7,6 +7,7 @@ import org.gradle.api.plugins.ExtraPropertiesExtension
 import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.tasks.TaskContainer
 import org.gradle.api.tasks.compile.JavaCompile
+import org.gradle.kotlin.dsl.embedJar
 import org.gradle.kotlin.dsl.extra
 import java.io.File
 
@@ -32,7 +33,7 @@ internal fun JweustExtension.default() = doIfAllow(JweustDefault.ALL) {
         tasks.findJar().firstOrNull()
     }
     doIfAllow(JweustDefault.JAR) {
-        jar.default(jarCurrent)
+        jar.default(jarCurrent,embedJar)
     }
     doIfAllow(JweustDefault.NAME) {
         rustProjectName = jarCurrent?.name?.let {
@@ -68,10 +69,10 @@ private fun TaskContainer.findJar() = sequence {
 
 context(Project)
 @JvmName("defaultJarSettings")
-internal fun JarConfig.default(file: File?):String? {
+internal fun JarConfig.default(file: File?,embedJar: Boolean =false):String? {
     val fileName = file?.name
     fileName?.let {
-        files += it
+        files += if (embedJar) file.absolutePath else file.name
     }
     logger.info("Jweust: JAR default settings is done, named {}",fileName)
     logger.debug("Jweust: jar default, {}", this)
@@ -114,7 +115,7 @@ internal fun JreConfig.default() {
         searchEnv += JvmSearch.EnvVar("JAVA_HOME")
     }
     if (this.min == 0U) {
-        logger.info("Jweust: JRE version is empty, searching")
+        logger.info("Jweust: jre min version is 0, searching for jvm version.")
         val jvm = extensions.findByType(JavaPluginExtension::class.java)
             ?.toolchain
             ?.languageVersion
@@ -126,9 +127,11 @@ internal fun JreConfig.default() {
             }.getOrNull()?.let {
                 it.firstOrNull()?.targetCompatibility?.split(".")?.last()
             }?.toIntOrNull()
-            ?:
-            11
-        logger.info("Jweust: JRE version is $jvm")
+            ?: run {
+                logger.warn("> Jweust: jvm version is not found, using 11 as default.")
+                11
+            }
+        logger.info("Jweust: jvm version is $jvm")
         min = jvm.toUInt()
     }
 }

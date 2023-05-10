@@ -25,11 +25,13 @@ class JweustPluginFunctionalTest {
         buildFile.writeText("""
             plugins {
                 id("me.heizi.jweust")
+                `java`
             }
             group = "me.heizi.jweust"
             version = "1.0"
             jweust {
                 defaults()
+                includeJarByGenerate()
             }
         """.trimIndent())
 
@@ -37,7 +39,7 @@ class JweustPluginFunctionalTest {
         // Run the build
         GradleRunner.create().
         withPluginClasspath().
-        withArguments("jweust","--stacktrace","--info",).
+        withArguments("jar","jweust","--stacktrace","--info",).
         withProjectDir(projectDir).
         forwardOutput().
         build()
