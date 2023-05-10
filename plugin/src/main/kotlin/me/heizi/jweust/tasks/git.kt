@@ -8,10 +8,30 @@ import java.io.File
 import java.io.IOException
 
 
-
 /**
  * It will generate a git repo, checkout, commit, merge automatically.
  * By String stage mode design, it's readable.
+ *
+ * # flow
+ * ```
+ * started -> clone -> started
+ *         -> new-branch-created -> checkout-branch
+ *         -> checkout-branch
+ * checkout-branch -> checking-merging-state
+ *
+ * checking-merging-state -> no-merge-problem
+ *                        -> throw exception -> x
+ *                           (restart task) -> merged -> parse
+ *
+ * no-merge-problem -> skip-fetch -> parse
+ *                  # updating
+ *                  -> fetching -> checking-tags -> tag-is-current -> parse
+ *                                 checking-tags -> tag-deprecated
+ * tag-deprecated -> checking-header-is-merged-tag -> merge-to-tag -> throw and stop -> x
+ *                -> ( wait for next time starting task and **no-merge-problem** )
+ * parse -> commit -> done
+ *       -> done
+ * ```
  */
 internal fun JweustTasks.generateValidatedRustProject() {
     var state = "started"
@@ -21,9 +41,7 @@ internal fun JweustTasks.generateValidatedRustProject() {
             ?: throw IllegalStateException("state $state is not supported")
     }
     _logger.lifecycle("> Task :jweust:git: OjbK")
-
 }
-
 /**
  * check the stage of jweust git repo and manage it, for saving the result of rust project or update.
  *
