@@ -7,10 +7,13 @@ import me.heizi.kotlinx.shell.*
 import java.io.File
 import java.io.IOException
 
-private inline val CommandResult.isSucceed: Boolean
-    get () = this is CommandResult.Success
 
-internal fun JweustTasks.git() {
+
+/**
+ * It will generate a git repo, checkout, commit, merge automatically.
+ * By String stage mode design, it's readable.
+ */
+internal fun JweustTasks.generateValidatedRustProject() {
     var state = "started"
     while (state != "done") {
         _logger.lifecycle("> Task :jweust:git: $state")
@@ -22,7 +25,7 @@ internal fun JweustTasks.git() {
 }
 
 /**
- * check state of repository and return it
+ * check the stage of jweust git repo and manage it, for saving the result of rust project or update.
  *
  * actions:
  *
@@ -38,46 +41,31 @@ internal fun JweustTasks.git() {
  * ...
  */
 internal fun JweustTasks.nextStateOf(state:String):String? = when(state) {
-    "started" -> {
-        if (!jweustRoot.exists()) "clone"
-        else {
-            Git.root = jweustRoot
-            require(jweustRoot.isDirectory) {
-                "jweust root must be exists"
-            }
-            require(jweustRoot.listFiles()?.isNotEmpty() == true) {
-                "jweust root must not be empty"
-            }
-            Git checkout "main"
-            Git branch this
-            if (Git.latestResult.isSucceed) {
-//                "branch-created"
-            }
-            Git checkout rustProjectName
-            val head = jweustRoot.resolve(".git")
-                .resolve("HEAD").takeIf { it.exists() }!!
-                .readText()
-                .lines()
-                .first { it.isNotEmpty() }
-            require(head.startsWith("ref: refs/heads/")) {
-                "jweust is not on a branch\n|$head|"
-            }
-            "checking-merging-state"
-        }
+    "started" -> if (!jweustRoot.exists()) "clone" else {
+        Git.root = jweustRoot
+        Git.isRepoOrThrows()
+        Git checkout "main"
+        Git branch this
+        if (Git.latestResult.isSucceed)
+            "new-branch-created"
+        else "checkout-branch"
+    }
+    "new-branch-created" -> {
+        "checkout-branch"
+    }
+    "checkout-branch" -> {
+        Git checkout rustProjectName
+        Git throwIfNotBranchOf rustProjectName
+        "checking-merging-state"
     }
     "checking-merging-state" -> {
-        val isMerging = jweustRoot.resolve(".git")
-            .resolve("MERGE_HEAD")
-            .exists()
-        require(!isMerging) {
+        require(!Git.isMerging) {
             "jweust is merging, please solve it manually"
         }
         "no-merge-problem"
     }
     "no-merge-problem" -> {
-        if ( getExtra("jweust.git.fetch") == false ) {
-            "skip-fetch"
-        } else "fetching"
+        if (isSkipFetch) "skip-fetch" else "fetching"
     }
     "fetching" -> {
         Git.fetch()
@@ -89,8 +77,8 @@ internal fun JweustTasks.nextStateOf(state:String):String? = when(state) {
         else "tag-is-current"
     }
     "tag-deprecated"   -> {
-        if (getExtra("jweust.git.deprecated.warn") != "false")
-        _logger.warn("jweust version ${Git.repoTag} is deprecated, please update your jweust to current version ${Git.latestTag} " +
+        if (isDeprecatedWarnDspIng)
+        _logger.warn("jweust version ${Git.currentTag} is deprecated, please update your jweust to current version ${Git.latestTag} " +
                 "you can clean the path after you update: `${jweustRoot.absolutePath}` .\n" +
                 "also you can disable new version checking by setting ext `jweust.git.fetch`as `false` in your project.\n" +
                 "to disable this warning, please set ext `jweust.git.deprecated.warn` as `false` in your project."
@@ -98,7 +86,7 @@ internal fun JweustTasks.nextStateOf(state:String):String? = when(state) {
         "checking-header-is-merged-tag"
     }
     "checking-header-is-merged-tag"-> {
-        Git branch "--contains ${Git.repoTag}"
+        Git branch "--contains ${Git.currentTag}"
         val contained = Git.latestResult.runCatching {
             throws().message.lines().
             map { it.trim('*',' ') }.contains(rustProjectName)
@@ -110,7 +98,7 @@ internal fun JweustTasks.nextStateOf(state:String):String? = when(state) {
         else "merged"
     }
     "merge-to-tag"  -> {
-        Git merge "tags/${Git.repoTag}"
+        Git merge "tags/${Git.currentTag}"
         throw NotImplementedError(
             "merging to tag now, please solve conflicts manually if it's needed. " +
                     "after that, please run this task again. the path is ${jweustRoot.absolutePath} . "
@@ -135,14 +123,11 @@ internal fun JweustTasks.nextStateOf(state:String):String? = when(state) {
     else -> null
 }
 
-
+@Suppress("UNUSED_PARAMETER")
 private object Git {
 
-    const val repoTag = "0.0.1"
+    const val currentTag = "0.0.3"
 
-    val isTagDeprecated: Boolean by lazy {
-        latestTag != repoTag
-    }
     @Suppress("NAME_SHADOWING")
     val latestTag by lazy {
         tag().sortedWith { o1, o2 ->
@@ -155,6 +140,9 @@ private object Git {
             255
         }.last()
     }
+
+    val isTagDeprecated get() = latestTag != currentTag
+
 
     const val repo = "git@github.com:ElisaMin/Jweust-template.git"
 
@@ -184,7 +172,7 @@ private object Git {
 
 
     infix fun cloneInto(workdir: File) = wrapper {
-        "git clone -b $repoTag $repo ${workdir.absolutePath}"().throws()
+        "git clone -b $currentTag $repo ${workdir.absolutePath}"().throws()
     }
 
     infix fun add(path: String) = wrapper {
@@ -193,20 +181,11 @@ private object Git {
     fun tag() = runBlocking {
         "git tag"().throws().message.lines()
     }
-    // lines[1] nothing to commit, working tree clean
-//    fun status() = runBlocking {
-//        "git status"().throws().message.lines()
-//    }
-    // Automatic merge failed; fix conflicts and then commit the result.
+
     infix fun merge(branch:String) = wrapper {
         "git merge $branch"()
     }
 
-
-
-//    infix fun checkout(jweustTasks: JweustTasks)
-//        = checkout(jweustTasks.rustProjectName)
-    // error: pathspec 'b' did not match any file(s) known to git
     infix fun checkout(repoTag: String) = wrapper {
         "git checkout $repoTag"()
     }
@@ -231,4 +210,42 @@ private object Git {
     infix fun branch(jweustTasks: JweustTasks)
         = branch(jweustTasks.rustProjectName)
 
+    infix fun throwIfNotBranchOf(branch: String) {
+        val head = root.resolve(".git")
+            .resolve("HEAD").takeIf { it.exists() }!!
+            .readText()
+            .lines()
+            .first { it.isNotEmpty() }
+        require(head.startsWith("ref: refs/heads/$branch")) {
+            "jweust is not on a branch\n|$head|"
+        }
+    }
+
+    val isMerging get() = root.resolve(".git")
+        .resolve("MERGE_HEAD")
+        .exists()
+    fun isRepoOrThrows() {
+        require(root.isDirectory) {
+            "jweust root must be exists"
+        }
+        val files = root.listFiles().takeIf { it?.isNotEmpty() == true }
+        require(files!=null) {
+            "jweust root must not be empty"
+        }
+        val git = files.find { it.name == ".git" }
+        require(
+            git!=null && git.isDirectory
+                    && git.listFiles()?.isNotEmpty() == true
+        )  {
+            "jweust root must be a git repository"
+        }
+    }
+
 }
+
+private val JweustTasks.isDeprecatedWarnDspIng: Boolean
+    get() = getExtra("jweust.git.deprecated.warn") != false
+private val JweustTasks.isSkipFetch: Boolean
+    get() = getExtra("jweust.git.fetch") == false
+private inline val CommandResult.isSucceed: Boolean
+    get () = this is CommandResult.Success

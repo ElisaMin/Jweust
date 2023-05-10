@@ -1,7 +1,7 @@
 package me.heizi.jweust
 
 import com.github.javaparser.utils.Utils.assertNotNull
-import me.heizi.jweust.tasks.git
+import me.heizi.jweust.tasks.generateValidatedRustProject
 import org.gradle.api.Project
 import org.gradle.kotlin.dsl.extra
 import org.gradle.testfixtures.ProjectBuilder
@@ -45,7 +45,7 @@ class JweustPluginTest {
             extra["jweust.git.fetch"] = false
         }
         runCatching {
-            task.git()
+            task.generateValidatedRustProject()
         }.onFailure {
             it.printStackTrace()
         }
