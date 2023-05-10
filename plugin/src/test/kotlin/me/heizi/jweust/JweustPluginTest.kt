@@ -46,6 +46,7 @@ class JweustPluginTest {
         }
         runCatching {
             task.generateValidatedRustProject()
+            task.build(task)
         }.onFailure {
             it.printStackTrace()
         }
@@ -59,8 +60,7 @@ class JweustPluginTest {
                 println(this)
             }
         }
-        task.clone(task)
-        task.parse()
+        task.generateValidatedRustProject()
         task.build(task)
     }
 

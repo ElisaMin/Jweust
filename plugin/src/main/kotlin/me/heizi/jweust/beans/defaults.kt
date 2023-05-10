@@ -118,7 +118,7 @@ internal fun JreConfig.default() {
         val jvm = extensions.findByType(JavaPluginExtension::class.java)
             ?.toolchain
             ?.languageVersion
-            ?.get()
+            ?.orNull
             ?.asInt()
             ?:
             tasks.runCatching {

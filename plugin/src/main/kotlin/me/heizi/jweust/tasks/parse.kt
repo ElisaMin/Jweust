@@ -26,7 +26,7 @@ internal fun JweustTasks.ignoreRemoveVarRs()
 }
 
 internal fun JweustTasks.updateIncludeRs()
-= changeOrWrite("src/include.rs") {
+= if (jarForInclude==null) false else changeOrWrite("src/include.rs") {
     asInclude(jarForInclude!!)
 }
 internal fun JweustTasks.updateOrCreateVarRs()

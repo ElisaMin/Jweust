@@ -20,8 +20,9 @@ open class JweustTask @Inject constructor (
         @Internal
         get() = super.getLogger()
     override val varKt: JweustConfig
+        @Internal
         get() = asJwConfig
-    override val jarForInclude: File? get() {
+    override val jarForInclude: File? @Internal get() {
         // null check or embedding is enabled
         hashOfIncludeJar
             ?.trim()
@@ -39,9 +40,6 @@ open class JweustTask @Inject constructor (
     override fun getExtra(key: String): Any? {
         return project.extra.getOrNull(key)
     }
-
-
-
 
     companion object {
         const val NAME = "jweust"
