@@ -11,7 +11,11 @@ data class JarConfig(
     @get:Input
     @get:Optional
     var launcher: LauncherConfig? = null
-): RustParsable
+): RustParsable {
+    fun launcher(block: LauncherConfig.() -> Unit) {
+        launcher = (launcher?:LauncherConfig()).apply(block)
+    }
+}
 
 
 //pub const JAR_LAUNCHER_FILE:usize = 0;

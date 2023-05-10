@@ -1,6 +1,7 @@
 package org.gradle.kotlin.dsl
 
 import me.heizi.jweust.JweustVarsExtension
+import me.heizi.jweust.beans.JarConfig
 
 /**
  * Embed jar into exe file.
@@ -13,3 +14,8 @@ var JweustVarsExtension.embedJar: Boolean
         if (!embed) hashOfIncludeJar = null
         else { includeJarByGenerate() }
     }
+var JarConfig.mainClass: String?
+    get() = launcher?.mainClass
+    set(value) { launcher {
+        mainClass = value
+    } }
