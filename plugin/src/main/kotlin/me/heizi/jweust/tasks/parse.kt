@@ -1,7 +1,7 @@
 package me.heizi.jweust.tasks
 
 import me.heizi.jweust.JweustTasks
-import me.heizi.jweust.JweustVarsExtension.Companion.includeEnabledBut
+import me.heizi.jweust.JweustVarsExtension
 import me.heizi.jweust.beans.*
 import java.io.File
 
@@ -33,6 +33,30 @@ changeOrWrite("src/includes.rs") {
 }
 internal fun TaskUpdateRepo.updateOrCreateVarRs()
 = changeOrWrite("src/var.rs") {
+    if (hashOfIncludeJar == JweustVarsExtension.includeEnabledBut) {
+        fun sha256(file: File):String {
+            val digest = java.security.MessageDigest.getInstance("SHA-256")
+            val fis = file.inputStream()
+            val buffer = ByteArray(1024)
+            var numRead = fis.read(buffer)
+            while (numRead != -1) {
+                digest.update(buffer, 0, numRead)
+                numRead = fis.read(buffer)
+            }
+            fis.close()
+            return digest.digest().joinToString("") { "%02x".format(it) }
+        }
+        val jarF = jar.files.toTypedArray()
+            .getOrNull(jar.launcher?.file?:0)
+            ?.let(::File)
+            ?.takeIf { it.exists() }
+        hashOfIncludeJar = if (jarF != null) sha256(jarF).also {
+            _logger.info("hash of jar is $it")
+        } else {
+            _logger.warn("jar embedding is enabling but launcher jar not found in ${jar}, disabling jar embedding")
+            null
+        }
+    }
     varKt.getRustFile().takeIf { it != this }
 }
 internal fun TaskUpdateRepo.updateToml(): Boolean
@@ -115,39 +139,6 @@ internal fun JweustConfig.getRustFile():String {
         productVersion = productVersion.createValidatedVersionOf(4)
         fileVersion = fileVersion.createValidatedVersionOf(4)
     }
-    if (hashOfIncludeJar == includeEnabledBut) {
-        fun sha256(file: File):String {
-            val digest = java.security.MessageDigest.getInstance("SHA-256")
-            val fis = file.inputStream()
-            val buffer = ByteArray(1024)
-            var numRead = fis.read(buffer)
-            while (numRead != -1) {
-                digest.update(buffer, 0, numRead)
-                numRead = fis.read(buffer)
-            }
-            fis.close()
-            return digest.digest().joinToString("") { "%02x".format(it) }
-        }
-
-
-        jar.files.toTypedArray()
-
-            .getOrNull(jar.launcher?.file?:0)
-            ?.let(::File)
-
-            ?.takeIf { it.exists() }
-
-            ?.let(::sha256)
-
-            ?.let {
-                hashOfIncludeJar = it
-            }
-
-            ?: throw NullPointerException(
-                "jar embedding is enabling but launcher jar not found in ${jar.files}, plz specify hashOfIncludeJar by includeJarById or compile the jar first"
-            )
-    }
-
     return arrayOf(
         this,
         log,

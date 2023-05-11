@@ -21,6 +21,11 @@ class JweustPluginTest {
             apply("me.heizi.jweust")
             apply("java")
         }
+        it.buildDir.resolve("libs")
+            .also { it.mkdirs() }
+            .resolve(it.name+".jar")
+            .also { it.writeText("hash-able") }
+
     } }
 
     @Test fun `plugin registers task`() {
@@ -101,6 +106,7 @@ class JweustPluginTest {
                 println(this)
             }
         }
+        taskUpdateRepo.taskAction()
         taskCompileExe.taskAction()
     }
 
