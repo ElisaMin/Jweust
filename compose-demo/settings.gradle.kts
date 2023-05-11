@@ -1,4 +1,4 @@
-rootProject.name = "Jweust"
+rootProject.name = "compose-demo"
 pluginManagement {
     repositories {
         gradlePluginPortal()
@@ -10,7 +10,12 @@ pluginManagement {
         }
     }
 }
-include(
-    "plugin"
-)
-project(":plugin").name = "jweust"
+//version catalog set lib to ../gradle/libs.versions.toml
+dependencyResolutionManagement {
+    versionCatalogs {
+        create("libs") {
+            from(files("../gradle/libs.versions.toml"))
+        }
+    }
+}
+includeBuild("..")

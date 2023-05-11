@@ -1,10 +1,9 @@
-@file:Suppress("unstableApiUsage")
-
+@file:Suppress("unstableApiUsage","DSL_SCOPE_VIOLATION")
 plugins {
     alias(libs.plugins.kotlin)
     alias(libs.plugins.compose)
-    alias(libs.plugins.jweust)
     alias(libs.plugins.shadowjar)
+    id("me.heizi.jweust")
 }
 dependencies {
     implementation(compose.desktop.currentOs)
@@ -43,21 +42,38 @@ compose.desktop {
 //        }
     }
 }
-tasks.build {
-    // invoke root project's task jar before build
-    dependsOn(":jweust:jar", ":jweust:publishToMavenLocal")
-}
 
+tasks {
+
+    getByName("jweust").dependsOn("shadowJar")
+
+    register("run-exe") {
+        group = "jweust"
+        dependsOn("build","jweust")
+        doLast {
+            val ext = projectDir.resolve("build/jweust/").listFiles()!!.find { it.name.endsWith(".exe") }!!
+            println(ext)
+            // println size of exe in mb
+            println("exe.size ="+ ext.length().toDouble() / 1024 + "kb")
+            val jar = projectDir.resolve("build/libs/").listFiles()!!.find { it.name.endsWith(".jar") }!!
+            println("jar.size ="+ jar.length().toDouble() / 1024 + "kb")
+            println("size.dst ="+ (ext.length()-jar.length()).toDouble() / 1024 + "kb")
+            exec {
+                commandLine(ext.absolutePath)
+            }
+        }
+    }
+
+}
+tasks.shadowJar {
+    this.manifest {
+        this.attributes["Main-Class"] = "MainKt"
+    }
+}
 jweust {
     defaults()
-    tasks.shadowJar {
-        this.manifest {
-            this.attributes["Main-Class"] = "MainKt"
-        }
-        jar.files = setOf(outputs.files.files.first().canonicalPath)
-    }
     charset {
-        this.pageCode = "65001"
+//        this.pageCode = "65001"
         this.stdout = "GBK"
     }
 }
