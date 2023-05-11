@@ -101,11 +101,7 @@ class JweustPluginTest {
                 println(this)
             }
         }
-        runCatching {
-            taskCompileExe.taskAction()
-        }.onFailure {
-            it.printStackTrace()
-        }
+        taskCompileExe.taskAction()
     }
 
 }

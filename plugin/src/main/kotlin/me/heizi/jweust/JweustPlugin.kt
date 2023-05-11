@@ -18,7 +18,7 @@ import java.io.File
 
 
 class JweustPlugin: Plugin<Project> {
-    private fun registering(project: Project) { with(project) {
+    private fun registering(project: Project) = with(project) {
         val extension = extensions.getByType<JweustExtension>()
         mapOf(
             TaskUpdateRepo.NAME to TaskUpdateRepo::class.java,
@@ -35,38 +35,20 @@ class JweustPlugin: Plugin<Project> {
             }?.let { jar->
                 it.add(0,jar.name)
             }
-        }.toTypedArray().let {
+        }.toTypedArray().let { dependents ->
             tasks.register(TaskJweust.NAME, TaskJweust::class.java,extension)
                 .get()
-                .dependsOn(*it)
-        }
+                .apply {  dependsOn(*dependents) }
 
-        arrayOf(
-            TaskJweust::class.java
-        ).forEach {
-            tasks.register(it.simpleName,it)
         }
-    } }
+    }
     override fun apply(project: Project) { with(project) {
         configurations.create(EXTENSION_NAME)
         extensions.add(JweustExtension::class.java, EXTENSION_NAME,JweustExtension(this))
-        afterEvaluate {
-            extensions.getByType(JweustExtension::class.java)
-        }
-        tasks.run {
-        }
-        tasks.register(
-            TaskJweust.NAME,
-            TaskJweust::class.java,
-            extensions.getByType(JweustExtension::class.java)
-        ).get().apply {
-            artifacts.add(EXTENSION_NAME,buildDir.resolve("jweust/${rustProjectName.replace('_','-')}.exe")) {
-                type = "exe"
-            }
-            // fixme: flexible cache
-            group = "jweust"
-            description = "build exe from rust project after clone and parsed"
-            taskAction()
+        val root = registering(this)
+
+        artifacts.add(EXTENSION_NAME,buildDir.resolve("jweust/${root.rustProjectName.replace('_','-')}.exe")) {
+            type = "exe"
         }
     } }
     companion object {
