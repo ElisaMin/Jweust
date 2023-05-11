@@ -1,7 +1,9 @@
 package me.heizi.jweust
 
 import com.github.javaparser.utils.Utils.assertNotNull
-import me.heizi.jweust.tasks.generateValidatedRustProject
+import me.heizi.jweust.tasks.TaskCompileExe
+import me.heizi.jweust.tasks.TaskJweust
+import me.heizi.jweust.tasks.TaskUpdateRepo
 import org.gradle.api.Project
 import org.gradle.kotlin.dsl.extra
 import org.gradle.testfixtures.ProjectBuilder
@@ -15,11 +17,16 @@ class JweustPluginTest {
 
     // Create a test project and apply the plugin
     private val project by lazy { ProjectBuilder.builder().build().also {
-        it.plugins.apply("me.heizi.jweust")
+        it.plugins.run {
+            apply("me.heizi.jweust")
+            apply("java")
+        }
     } }
 
     @Test fun `plugin registers task`() {
-        assertNotNull(project.tasks.findByName(JweustTask.NAME))
+        assertNotNull(project.tasks.findByName(TaskJweust.NAME))
+        assertNotNull(project.tasks.findByName(TaskUpdateRepo.NAME))
+        assertNotNull(project.tasks.findByName(TaskCompileExe.NAME))
     }
     @Test fun `plugin registers extension`() {
         assertNotNull(project.extensions.findByName(JweustPlugin.EXTENSION_NAME))
@@ -29,13 +36,16 @@ class JweustPluginTest {
         project.jweust {
             rustProjectName = projectName
         }
-        assertEquals(projectName,project.tasks.withType(JweustTask::class.java).first().rustProjectName)
+        assertEquals(projectName,project.tasks.withType(TaskJweust::class.java).first().rustProjectName)
     }
 
-    private val task by lazy {
-        project.tasks.withType(JweustTask::class.java).first()
+    private val taskUpdateRepo by lazy {
+        project.tasks.withType(TaskUpdateRepo::class.java).first()
     }
-    @Test fun `jweust git`() {
+    private val taskCompileExe by lazy {
+        project.tasks.withType(TaskCompileExe::class.java).first()
+    }
+    @Test fun `jweust files init`() {
         with(project) {
             jweust {
                 defaults()
@@ -45,8 +55,30 @@ class JweustPluginTest {
             extra["jweust.git.fetch"] = false
         }
         runCatching {
-            task.generateValidatedRustProject()
-            task.build(task)
+            taskUpdateRepo.taskAction()
+        }.onFailure {
+            it.printStackTrace()
+        }
+    }
+    @Test fun `jweust files update`() {
+        with(project) {
+            jweust {
+                defaults()
+                rustProjectName = run {
+                    // hash256 of timestamp
+                    val time = System.currentTimeMillis().toString()
+                    java.security.MessageDigest.getInstance("SHA-256").digest(time.toByteArray()).joinToString("") {
+                        "%02x".format(it)
+                    }
+                }
+                jweustRoot = buildDir.resolve("../../jweust")
+                println(this)
+            }
+            extra["jweust.git.fetch"] = false
+        }
+
+        runCatching {
+            taskUpdateRepo.taskAction()
         }.onFailure {
             it.printStackTrace()
         }
@@ -60,10 +92,21 @@ class JweustPluginTest {
                 println(this)
             }
         }
-        task.generateValidatedRustProject()
-        task.build(task)
     }
-
+    @Test fun `jweust compile exe`() {
+        with(project) {
+            jweust {
+                defaults()
+                jweustRoot = buildDir.resolve("../../jweust")
+                println(this)
+            }
+        }
+        runCatching {
+            taskCompileExe.taskAction()
+        }.onFailure {
+            it.printStackTrace()
+        }
+    }
 
 }
 

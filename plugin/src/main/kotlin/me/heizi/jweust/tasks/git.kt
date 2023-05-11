@@ -33,7 +33,7 @@ import java.io.IOException
  *       -> done
  * ```
  */
-internal fun JweustTasks.generateValidatedRustProject() {
+internal fun TaskUpdateRepo.generateValidatedRustProject() {
     var state = "started"
     while (state != "done") {
         _logger.lifecycle("> Task :jweust:git: $state")
@@ -47,7 +47,7 @@ internal fun JweustTasks.generateValidatedRustProject() {
  *
  * @see generateValidatedRustProject
  */
-private fun JweustTasks.nextStateOf(state:String):String? = when(state) {
+private fun TaskUpdateRepo.nextStateOf(state:String):String? = when(state) {
     "started" -> if (!hashRepo)  "clone" else {
         Git.root = jweustRoot
         Git.isRepoOrThrows()

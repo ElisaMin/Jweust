@@ -3,6 +3,9 @@ package me.heizi.jweust
 
 import me.heizi.jweust.JweustVarsExtension.Companion.asJwConfig
 import me.heizi.jweust.beans.*
+import me.heizi.jweust.tasks.TaskCompileExe
+import me.heizi.jweust.tasks.TaskJweust
+import me.heizi.jweust.tasks.TaskUpdateRepo
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.tasks.Input
@@ -10,16 +13,51 @@ import org.gradle.api.tasks.Nested
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.kotlin.dsl.extra
+import org.gradle.kotlin.dsl.getByType
 import java.io.File
 
 
 class JweustPlugin: Plugin<Project> {
+    private fun registering(project: Project) { with(project) {
+        val extension = extensions.getByType<JweustExtension>()
+        mapOf(
+            TaskUpdateRepo.NAME to TaskUpdateRepo::class.java,
+            TaskCompileExe.NAME to TaskCompileExe::class.java,
+        ).filter { val (name,_) = it
+            tasks.findByName(name)==null
+        }.map { (name,clazz) ->
+            tasks.register(name,clazz,extension)
+                .get().name
+        }.toMutableList().also {
+            logger.info("registered tasks: $it")
+            with(tasks) {
+                findByName("shadowJar")?:findByName("jar")
+            }?.let { jar->
+                it.add(0,jar.name)
+            }
+        }.toTypedArray().let {
+            tasks.register(TaskJweust.NAME, TaskJweust::class.java,extension)
+                .get()
+                .dependsOn(*it)
+        }
+
+        arrayOf(
+            TaskJweust::class.java
+        ).forEach {
+            tasks.register(it.simpleName,it)
+        }
+    } }
     override fun apply(project: Project) { with(project) {
         configurations.create(EXTENSION_NAME)
         extensions.add(JweustExtension::class.java, EXTENSION_NAME,JweustExtension(this))
+        afterEvaluate {
+            extensions.getByType(JweustExtension::class.java)
+        }
+        tasks.run {
+        }
         tasks.register(
-            JweustTask.NAME,
-            JweustTask::class.java,
+            TaskJweust.NAME,
+            TaskJweust::class.java,
             extensions.getByType(JweustExtension::class.java)
         ).get().apply {
             artifacts.add(EXTENSION_NAME,buildDir.resolve("jweust/${rustProjectName.replace('_','-')}.exe")) {

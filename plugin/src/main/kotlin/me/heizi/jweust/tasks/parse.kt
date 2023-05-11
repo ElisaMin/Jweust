@@ -10,7 +10,7 @@ import java.io.File
  *
  * Return true if any file is changed
  */
-internal fun JweustTasks.updateFiles() =
+internal fun TaskUpdateRepo.updateFiles() =
     arrayOf(
         updateOrCreateVarRs(),
         updateIncludeRs(),
@@ -26,15 +26,16 @@ internal fun JweustTasks.ignoreRemoveVarRs()
     }?.joinToString("\n")
 }
 
-internal fun JweustTasks.updateIncludeRs()
-= if (jarForInclude==null) false else changeOrWrite("src/includes.rs") {
+internal fun TaskUpdateRepo.updateIncludeRs()
+= if (jarForInclude==null) false else
+changeOrWrite("src/includes.rs") {
     asInclude(jarForInclude!!)
 }
-internal fun JweustTasks.updateOrCreateVarRs()
+internal fun TaskUpdateRepo.updateOrCreateVarRs()
 = changeOrWrite("src/var.rs") {
     varKt.getRustFile().takeIf { it != this }
 }
-internal fun JweustTasks.updateToml(): Boolean
+internal fun TaskUpdateRepo.updateToml(): Boolean
 = changeOrWrite("Cargo.toml") {
     setCargoVars(
         projectName = rustProjectName,
