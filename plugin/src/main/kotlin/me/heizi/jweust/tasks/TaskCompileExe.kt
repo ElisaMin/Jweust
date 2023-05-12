@@ -29,7 +29,7 @@ open class TaskCompileExe @Inject constructor(
             if (!isDirectory)
                 mkdirs()
             val exe = exeFile
-            exe.copyTo(resolve(exe.name),true)
+            exe.copyTo(resolve(project.name+".exe"),true)
             exe.deleteOnExit()
         }
         Unit

@@ -12,42 +12,48 @@ import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Nested
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputDirectory
+import org.gradle.kotlin.dsl.embedJar
 import org.gradle.kotlin.dsl.extra
 import org.gradle.kotlin.dsl.getByType
 import java.io.File
 
 
 class JweustPlugin: Plugin<Project> {
+
+    private val tasksMap get() = mapOf(
+        TaskUpdateRepo.NAME to TaskUpdateRepo::class.java,
+        TaskCompileExe.NAME to TaskCompileExe::class.java,
+        TaskJweust.NAME to TaskJweust::class.java,
+    )
+
     private fun registering(project: Project) = with(project) {
         val extension = extensions.getByType<JweustExtension>()
-        mapOf(
-            TaskUpdateRepo.NAME to TaskUpdateRepo::class.java,
-            TaskCompileExe.NAME to TaskCompileExe::class.java,
-        ).filter { val (name,_) = it
-            tasks.findByName(name)==null
-        }.map { (name,clazz) ->
-            tasks.register(name,clazz,extension)
-                .get().name
-        }.toMutableList().also {
-            logger.info("registered tasks: $it")
-            with(tasks) {
-                findByName("shadowJar")?:findByName("jar")
-            }?.let { jar->
-                it.add(0,jar.name)
+        for( (name,clazz) in tasksMap) {
+            tasks.register(name,clazz,extension).get()
+        }
+        afterEvaluate {
+            val jar = with(tasks) { findByName("shadowJar")?:findByName("jar") }
+            for( (name,clazz) in tasksMap) {
+                tasks.named(name,clazz) {
+                    if (embedJar) {
+                        if (jar != null) dependsOn(jar)
+                        else logger
+                            .warn("Jweust: embedJar is true but jar task is not found")
+                    }
+                    if (name == TaskJweust.NAME) {
+                        dependsOn(TaskUpdateRepo.NAME)
+                        finalizedBy(TaskCompileExe.NAME)
+//                        mustRunAfter(TaskCompileExe.NAME)
+                    }
+                }
             }
-        }.toTypedArray().let { dependents ->
-            tasks.register(TaskJweust.NAME, TaskJweust::class.java,extension)
-                .get()
-                .apply {  dependsOn(*dependents) }
-
         }
     }
     override fun apply(project: Project) { with(project) {
         configurations.create(EXTENSION_NAME)
         extensions.add(JweustExtension::class.java, EXTENSION_NAME,JweustExtension(this))
-        val root = registering(this)
-
-        artifacts.add(EXTENSION_NAME,buildDir.resolve("jweust/${root.rustProjectName.replace('_','-')}.exe")) {
+        registering(project)
+        artifacts.add(EXTENSION_NAME,buildDir.resolve("exe/${project.name}.exe")) {
             type = "exe"
         }
     } }

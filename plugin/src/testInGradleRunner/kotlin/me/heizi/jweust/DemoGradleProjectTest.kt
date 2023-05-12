@@ -5,9 +5,6 @@ import org.junit.jupiter.api.io.TempDir
 import java.io.File
 import kotlin.test.Test
 
-/**
- * A simple functional test for the 'me.heizi.jweust.greeting' plugin.
- */
 class DemoGradleProjectTest {
 
     @field:TempDir
@@ -16,9 +13,13 @@ class DemoGradleProjectTest {
     private val buildFile by lazy {
         projectDir.resolve("build.gradle.kts")
     }
+
     private val settingsFile by lazy { projectDir.resolve("settings.gradle.kts") }
+
     private fun initProject() {
+
         settingsFile.writeText("")
+
         buildFile.writeText("""
             plugins {
                 id("me.heizi.jweust")
@@ -34,6 +35,7 @@ class DemoGradleProjectTest {
                 }
             }
         """.trimIndent())
+
         projectDir.resolve("src/main/java/")
             .also { it.mkdirs() }
             .resolve("Main.java").
@@ -59,11 +61,11 @@ class DemoGradleProjectTest {
         // Run the build
         GradleRunner.create().
         withPluginClasspath().
-        withArguments("jar","jweust","--stacktrace","--info",).
+        withArguments("jweust","--stacktrace","--info",).
         withProjectDir(projectDir).
         forwardOutput().
         build()
-        val ext = projectDir.resolve("build/jweust/").listFiles()!!.find { it.name.endsWith(".exe") }!!
+        val ext = projectDir.resolve("build/exe/").listFiles()!!.find { it.name.endsWith(".exe") }!!
         println(ext)
         // println size of exe in mb
         println("exe.size ="+ ext.length().toDouble() / 1024 + "kb")

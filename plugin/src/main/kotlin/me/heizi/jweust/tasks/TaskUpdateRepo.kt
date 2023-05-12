@@ -17,7 +17,7 @@ open class TaskUpdateRepo @Inject constructor (
 ): JweustTasks.TaskBase(extension) {
 
     companion object {
-        const val NAME = "updateExeRepo"
+        const val NAME = "configExe"
     }
     init {
         group = "jweust"

@@ -51,7 +51,7 @@ tasks {
         group = "jweust"
         dependsOn("build","jweust")
         doLast {
-            val ext = projectDir.resolve("build/jweust/").listFiles()!!.find { it.name.endsWith(".exe") }!!
+            val ext = projectDir.resolve("build/exe/").listFiles()!!.find { it.name.endsWith(".exe") }!!
             println(ext)
             // println size of exe in mb
             println("exe.size ="+ ext.length().toDouble() / 1024 + "kb")
