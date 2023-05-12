@@ -4,6 +4,7 @@ import kotlinx.coroutines.runBlocking
 import me.heizi.jweust.JweustTasks
 import me.heizi.jweust.tasks.Git.throws
 import me.heizi.kotlinx.shell.*
+import org.gradle.api.Project
 import java.io.File
 import java.io.IOException
 
@@ -34,6 +35,9 @@ import java.io.IOException
  * ```
  */
 internal fun TaskUpdateRepo.generateValidatedRustProject() {
+    Git.project = project
+    Git.root = jweustRoot
+    Git.isRepoOrThrows()
     var state = "started"
     while (state != "done") {
         _logger.lifecycle("> Task :jweust:git: $state")
@@ -49,8 +53,6 @@ internal fun TaskUpdateRepo.generateValidatedRustProject() {
  */
 private fun TaskUpdateRepo.nextStateOf(state:String):String? = when(state) {
     "started" -> if (!hashRepo)  "clone" else {
-        Git.root = jweustRoot
-        Git.isRepoOrThrows()
         Git checkout "main"
         Git branch this
         if (Git.latestResult.isSucceed)
@@ -137,6 +139,8 @@ private fun TaskUpdateRepo.nextStateOf(state:String):String? = when(state) {
 private object Git {
 
     const val currentTag = "0.0.3"
+
+    lateinit var project: Project
 
     @Suppress("NAME_SHADOWING")
     val latestTag by lazy {
@@ -250,6 +254,58 @@ private object Git {
             "jweust root must be a git repository : ${root.absolutePath}"
         }
     }
+    private val hashRepo: Boolean? get() = root.run has@{
+        if (!exists()&&!isDirectory) return@has false
+        val fileNames = listFiles()?.takeIf { it.isNotEmpty() }?.map { it.name }
+        if (fileNames==null) {
+            require(delete())
+            return@has false
+        }
+        val req = mutableListOf(
+            "LICENSE",
+            ".git",
+            "Cargo.toml",
+            "src",
+        )
+
+        val throws = {
+
+            throw IOException(
+                "jweust root is not a valid repository, " +
+                        "please delete it and run this task again. " +
+                        "the path is $absolutePath . " +
+                        "missing files : $req"
+            )
+        }
+        for (f in fileNames) {
+            if (f in req) {
+                req.remove(f)
+            }
+        }
+        if (req.isNotEmpty())
+            throws()
+        req.addAll(arrayOf(
+            "charsets.rs",
+            "includes.rs",
+            "jvm.rs",
+            "logs.rs",
+            "main.rs",
+            "mod.rs",
+        ))
+
+        resolve("src").listFiles()
+            ?.map { it.name }
+            ?.forEach {
+                if (it in req) { req.remove(it) }
+        }
+        if (req.isNotEmpty())
+            throws()
+
+        return@has fileNames.size > 5
+                && "LICENSE" in fileNames
+                && ".git" in fileNames
+    }
+
 
 }
 
