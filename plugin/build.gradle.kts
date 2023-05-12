@@ -61,7 +61,7 @@ testing {
         val test by getting(JvmTestSuite::class) {
             useKotlinTest()
         }
-        create<JvmTestSuite>("functionalTest") {
+        create<JvmTestSuite>("testInGradleRunner") {
             useKotlinTest()
             dependencies {
                 implementation(project())
@@ -74,9 +74,9 @@ testing {
         }
     }
 }
-gradlePlugin.testSourceSets(sourceSets["functionalTest"])
+gradlePlugin.testSourceSets(sourceSets["testInGradleRunner"])
 
 tasks.named<Task>("check") {
     // Include functionalTest as part of the check lifecycle
-    dependsOn(testing.suites.named("functionalTest"))
+    dependsOn(testing.suites.named("testInGradleRunner"))
 }
