@@ -4,6 +4,7 @@ import com.github.javaparser.utils.Utils.assertNotNull
 import me.heizi.jweust.tasks.TaskCompileExe
 import me.heizi.jweust.tasks.TaskJweust
 import me.heizi.jweust.tasks.TaskUpdateRepo
+import me.heizi.jweust.tasks.updateFiles
 import org.gradle.api.Project
 import org.gradle.kotlin.dsl.extra
 import org.gradle.testfixtures.ProjectBuilder
@@ -59,34 +60,29 @@ class JweustPluginTest {
             }
             extra["jweust.git.fetch"] = false
         }
-        runCatching {
-            taskUpdateRepo.taskAction()
-        }.onFailure {
-            it.printStackTrace()
-        }
+        taskUpdateRepo.taskAction()
     }
-    @Test fun `jweust files update`() {
-        with(project) {
-            jweust {
-                defaults()
-                rustProjectName = run {
-                    // hash256 of timestamp
-                    val time = System.currentTimeMillis().toString()
-                    java.security.MessageDigest.getInstance("SHA-256").digest(time.toByteArray()).joinToString("") {
-                        "%02x".format(it)
-                    }
-                }
-                jweustRoot = buildDir.resolve("../../jweust")
-                println(this)
-            }
-            extra["jweust.git.fetch"] = false
-        }
-
-        runCatching {
+    @Test fun `jweust files update`() = with(project) {
+        jweust {
+            defaults()
+            jweustRoot = buildDir.resolve("../../jweust")
             taskUpdateRepo.taskAction()
-        }.onFailure {
-            it.printStackTrace()
+            val name = rustProjectName
+            taskUpdateRepo.updateFiles()
+            rustProjectName = run {
+                // hash256 of timestamp
+                val time = System.currentTimeMillis().toString()
+                java.security.MessageDigest.getInstance("SHA-256").digest(time.toByteArray()).joinToString("") {
+                    "%02x".format(it)
+                }
+            }
+            assert(taskUpdateRepo.updateFiles())
+            assert(!taskUpdateRepo.updateFiles())
+            rustProjectName = name
         }
+        taskUpdateRepo.updateFiles()
+        // return if its changed
+        assert(!taskUpdateRepo.updateFiles())
     }
 
     @Test fun `jweust tasks`() {
