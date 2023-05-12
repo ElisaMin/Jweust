@@ -3,10 +3,8 @@ package me.heizi.jweust.tasks
 import kotlinx.coroutines.runBlocking
 import me.heizi.jweust.JweustTasks
 import me.heizi.jweust.tasks.Git.throws
-import me.heizi.kotlinx.shell.*
 import org.gradle.api.Project
-import java.io.File
-import java.io.IOException
+import java.io.*
 
 
 /**
@@ -35,12 +33,12 @@ import java.io.IOException
  * ```
  */
 internal fun TaskUpdateRepo.generateValidatedRustProject() {
-    Git.project = project
+    Git.project = this.project
     Git.root = jweustRoot
     Git.isRepoOrThrows()
     var state = "started"
     while (state != "done") {
-        _logger.lifecycle("> Task :jweust:git: $state")
+        _logger.lifecycle("> jweust configuration --$state")
         state = nextStateOf(state)
             ?: throw IllegalStateException("state $state is not supported")
     }
@@ -55,7 +53,7 @@ private fun TaskUpdateRepo.nextStateOf(state:String):String? = when(state) {
     "started" -> if (!hashRepo)  "clone" else {
         Git checkout "main"
         Git branch this
-        if (Git.latestResult.isSucceed)
+        if (Git.latestResult.isSuccess)
             "new-branch-created"
         else "checkout-branch"
     }
@@ -100,7 +98,7 @@ private fun TaskUpdateRepo.nextStateOf(state:String):String? = when(state) {
     "checking-header-is-merged-tag"-> {
         Git branch "--contains ${Git.currentTag}"
         val contained = Git.latestResult.runCatching {
-            throws().message.lines().
+            throws().stdout.lines().
             map { it.trim('*',' ') }.contains(rustProjectName)
         }.onFailure {
             it.printStackTrace()
@@ -134,6 +132,12 @@ private fun TaskUpdateRepo.nextStateOf(state:String):String? = when(state) {
     }
     else -> null
 }
+typealias GitResult = Triple<String,String,Int>
+typealias GitResultW = Result<GitResult>
+private inline val GitResult.isSucceed get() = code == 0
+private inline val GitResult.stdout get() = first
+private inline val GitResult.stderr get() = second
+private inline val GitResult.code get() = third
 
 @Suppress("UNUSED_PARAMETER")
 private object Git {
@@ -160,28 +164,27 @@ private object Git {
 
     const val repo = "git@github.com:ElisaMin/Jweust-template.git"
 
-    var latestResult = runBlocking {
-        Shell("echo Hello World").await()
-    }
+    var latestResult: GitResultW = Result.failure(IllegalStateException("git not run yet"))
     var root = File(".")
     private inline fun <T> wrapper(crossinline block:suspend ()->T) {
         runCatching { runBlocking {
             block().let {
-                if (it is CommandResult) {
-                    latestResult = it
+                runCatching {
+                    it as GitResultW
+                }.getOrNull()!!.let { result ->
+                    latestResult = result
                 }
             }
         } }.onFailure {
             throw IllegalStateException("git failed",it)
         }
     }
-    fun CommandResult.throws(): CommandResult.Success {
+    fun GitResultW.throws(): GitResult {
         latestResult = this
-        if (this is CommandResult.Failed){
-            val err = "$processingMessage\n$errorMessage"
-            throw IOException(err)
+        onFailure {
+            throw IllegalStateException("git failed",it)
         }
-        return this as CommandResult.Success
+        return getOrThrow()
     }
 
 
@@ -193,7 +196,7 @@ private object Git {
         "git add $path"()
     }
     fun tag() = runBlocking {
-        "git tag"().throws().message.lines()
+        "git tag"().throws().stdout.lines()
     }
 
     infix fun merge(branch:String) = wrapper {
@@ -207,11 +210,48 @@ private object Git {
     infix fun commit(msg: String)  = wrapper {
         "git commit -m \"$msg\""()
     }
+    class PrintAndDataByteOutputStream(
+        err:Boolean = false
+    ):OutputStream() {
+        val data = ByteArrayOutputStream()
+        val print: PrintStream = if(err) System.err else System.out
+        override fun write(b: Int) {
+            print.print(b.toChar())
+            data.write(b)
+        }
 
-    @OptIn(ExperimentalApiReShell::class)
-    private suspend inline operator fun String.invoke(): CommandResult = ReShell(
-        this, workdir = root
-    ).await()
+        override fun close() {
+            super.close()
+            data.close()
+        }
+
+        override fun toString(): String {
+            val r = data.toString()
+            close()
+            return r
+        }
+    }
+
+    private operator fun String.invoke(throws:Boolean = false,dontPrint: Boolean =false) = project.runCatching {
+        val stdout = PrintAndDataByteOutputStream()
+        val stderr = PrintAndDataByteOutputStream(true)
+        val exitCode = exec {
+            errorOutput = stderr
+            standardOutput = stdout
+            workingDir = root
+            commandLine("cmd","/c",this@invoke)
+        }.run {
+            if(throws) rethrowFailure() else this
+        }.exitValue
+
+        Triple(
+            stdout.toString(),
+            stderr.toString(),
+            exitCode
+        )
+    }.onFailure {
+        if(throws) throw it
+    }
 
     fun fetch() = wrapper {
         "git fetch --all --tags"()
@@ -254,7 +294,7 @@ private object Git {
             "jweust root must be a git repository : ${root.absolutePath}"
         }
     }
-    private val hashRepo: Boolean? get() = root.run has@{
+    fun hashRepoOrThrow() = root.run has@{
         if (!exists()&&!isDirectory) return@has false
         val fileNames = listFiles()?.takeIf { it.isNotEmpty() }?.map { it.name }
         if (fileNames==null) {
@@ -298,51 +338,27 @@ private object Git {
             ?.forEach {
                 if (it in req) { req.remove(it) }
         }
-        if (req.isNotEmpty())
+        return@has if (req.isNotEmpty())
             throws()
-
-        return@has fileNames.size > 5
-                && "LICENSE" in fileNames
-                && ".git" in fileNames
+        else true
     }
 
 
 }
 
-private val JweustTasks.hashRepo: Boolean get() = jweustRoot.run has@{
-
-    if (!exists()&&!isDirectory) return@has false
-    val fileNames = listFiles()?.takeIf { it.isNotEmpty() }?.map { it.name }
-
-    val deleteAndThrow = {
-        if (!delete()) {
-            throw IOException("jweust root is not a directory and can't be deleted")
+private val JweustTasks.hashRepo: Boolean get() =
+    runCatching {
+        Git.root = jweustRoot
+        Git.hashRepoOrThrow()
+    }.getOrElse {
+        if (getExtra("jweust.root-files.delete-always") != true ) {
+            require(jweustRoot.delete())
+            return true
         }
+        throw IllegalStateException("repo has files, but not validate. you can set the extra properties `jweust.root-files.delete-always` as true to enable deleting",it)
     }
 
-    if (fileNames==null) {
-        deleteAndThrow()
-        return@has false
-    }
-
-    val hasRepo = fileNames.size>5
-            && "LICENSE" in fileNames
-            && ".git" in fileNames
-
-    if (hasRepo) return@has true
-
-    if (getExtra("jweust.root-files.delete-always") != true ) {
-        deleteAndThrow()
-        return@has false
-    }
-    error("jweust root must be empty or contains only .git folder,but it contains ${fileNames.joinToString()}. " +
-            "but somehow, you can set jweust.root-files.delete-always to true to delete it automatically ."
-    )
-
-}
 private val JweustTasks.isDeprecatedWarnDspIng: Boolean
     get() = getExtra("jweust.git.deprecated.warn") != false
 private val JweustTasks.isUpdateTag: Boolean
     get() = getExtra("jweust.git.update-tag") != false
-private inline val CommandResult.isSucceed: Boolean
-    get () = this is CommandResult.Success
