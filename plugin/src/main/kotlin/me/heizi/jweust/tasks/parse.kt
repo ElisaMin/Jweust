@@ -75,7 +75,7 @@ private fun String.asInclude(
         append('"')
         append(file.absolutePath.replace("\\", "\\\\"))
         append('"')
-        append(");")
+        append(")")
     }
     if (lineForReplace in this) return null
 
