@@ -162,12 +162,24 @@ private inline fun JweustTasks.changeOrWrite(
     crossinline block:String.()->String?
 ):Boolean {
     val file = jweustRoot.resolve(path)
-    if (!file.exists()) {
-        file.parentFile.mkdirs()
-        file.createNewFile()
+    val isVar = path == "src/var.rs"
+    if (isVar) {
+        if (!file.exists()) {
+            file.parentFile.mkdirs()
+            file.createNewFile()
+        }
     }
-    val content = file.readText().block()
+    require(file.exists()) {
+        "file $file not found"
+    }
+    file.readText()
+        .also {
+            if (!isVar && it.isBlank()) {
+                _logger.warn("file $file is empty")
+            }
+        }
+        .block()
+        ?.let { file.writeText(it) }
         ?: return false
-    file.writeText(content)
     return true
 }
