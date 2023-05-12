@@ -30,17 +30,20 @@ open class TaskUpdateRepo @Inject constructor (
         get() = asJwConfig
     @get:Internal
     val jarForInclude: File? by lazy {
+
         require(hashOfIncludeJar!= JweustVarsExtension.includeEnabledBut) {
             "hash jar failed, please report this issue to github."
         }
-        // null check
-        hashOfIncludeJar?.trim()
-            ?.takeIf { it.isNotEmpty() }
-            ?: return@lazy null
 
-        jar.launcher?.file // index ?
-            ?.let { index -> jar.files.toTypedArray().getOrNull(index) }
-            ?.let(::File)
+        hashOfIncludeJar?.trim()?.takeIf { it.isNotEmpty() } ?: return@lazy null
+
+        jar.runCatching { files
+            .toTypedArray()[launcher?.file?:0]
+            .let(::File)
+            .takeIf { it.exists() }!!
+        }.onFailure {
+            throw IllegalStateException("jar config is not correct,please set a correct jar file path in jweust block",it)
+        }.getOrThrow()
     }
 
     override fun taskAction() {
