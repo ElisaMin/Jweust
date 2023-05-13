@@ -25,7 +25,7 @@ it's not released yet, so you can clone this repository and run `gradlew publish
 ### 1. Add the plugin to your project
 ```toml
 [versions]
-jweust = "INTERNAL"
+jweust = "0.0.1"
 [plugins]
 jweust = { id = "me.heizi.jweust", version.ref = "jweust" }
 ```

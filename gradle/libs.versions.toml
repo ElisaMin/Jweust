@@ -1,5 +1,5 @@
 [versions]
-jweust = "INTERNAL"
+jweust = "0.0.1"
 kotlin = "1.8.20"
 compose = "1.4.0"
 khell = "0.0.1-alpha03"
