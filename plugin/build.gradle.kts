@@ -72,3 +72,32 @@ tasks.named<Task>("check") {
     // Include functionalTest as part of the check lifecycle
     dependsOn(testing.suites.named("testInGradleRunner"))
 }
+publishing.publications.all {
+    if (this !is MavenPublication) return@all
+    pom {
+        name = "Jweust"
+        description = "A modern Gradle plugin aiming to replace exe4J " +
+                "by generating native Windows EXE for JAR files using the Rust language, " +
+                "with features like embedding the JAR, logging, and Git repository management."
+        url = "https://github.com/ElisaMin/Jweust"
+        licenses {
+            license {
+                name = "Apache-2.0"
+                url = "https://www.apache.org/licenses/LICENSE-2.0.txt"
+                distribution = "repo"
+            }
+        }
+        developers {
+            developer {
+                id = "ElisaMin"
+                name = "ElisaMin"
+                email = "heizi@lge.fun"
+            }
+        }
+        scm {
+            connection = "scm:git:git://github.com/ElisaMin/Jweust.git"
+            developerConnection = "scm:git:ssh://github.com:ElisaMin/Jweust.git"
+            url = "https://github.com/ElisaMin/Jweust"
+        }
+    }
+}
