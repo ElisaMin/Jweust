@@ -2,9 +2,10 @@ package me.heizi.jweust.tasks
 
 import kotlinx.coroutines.runBlocking
 import me.heizi.jweust.JweustTasks
-import me.heizi.jweust.tasks.Git.throws
 import org.gradle.api.Project
-import java.io.*
+import java.io.File
+import java.io.IOException
+import java.io.OutputStream
 
 
 /**
@@ -51,7 +52,10 @@ internal fun TaskUpdateRepo.generateValidatedRustProject() {
  */
 private fun TaskUpdateRepo.nextStateOf(state:String):String? = when(state) {
     "started" -> if (!hashRepo)  "clone" else {
+        Git.throwsNext()
+        Git.dismissNext()
         Git checkout "main"
+        Git.dismissNext()
         Git branch this
         if (Git.latestResult.isSuccess)
             "new-branch-created"
@@ -96,13 +100,15 @@ private fun TaskUpdateRepo.nextStateOf(state:String):String? = when(state) {
         "checking-header-is-merged-tag"
     }
     "checking-header-is-merged-tag"-> {
+        Git.throwsNext()
         Git branch "--contains ${Git.currentTag}"
-        val contained = Git.latestResult.runCatching {
-            throws().stdout.lines().
-            map { it.trim('*',' ') }.contains(rustProjectName)
-        }.onFailure {
-            it.printStackTrace()
-        }.getOrNull() == true
+        val contained: Boolean = Git.latestResult
+            .map {
+                it.stdout.lines().map { it.trim('*',' ') }
+                    .contains(rustProjectName)
+            }.onFailure {
+                it.printStackTrace()
+            }.getOrDefault(true)
         if (!contained)
             "merge-to-tag"
         else "merged"
@@ -119,7 +125,9 @@ private fun TaskUpdateRepo.nextStateOf(state:String):String? = when(state) {
     "tag-is-current" -> "parse"
     "parse" -> if(updateFiles()) "commit" else "done"
     "commit" -> {
+        Git.throwsNext()
         Git add "."
+        Git.throwsNext()
         Git commit "update ${System.nanoTime()}"
         "done"
     }
@@ -138,6 +146,16 @@ private inline val GitResult.isSucceed get() = code == 0
 private inline val GitResult.stdout get() = first
 private inline val GitResult.stderr get() = second
 private inline val GitResult.code get() = third
+class GitException(
+    command:String,
+    msg: String,
+//    code: Int?=null,
+    cause: Throwable? = null
+) : RuntimeException("""
+    |`$command` not succeed cuz :
+    |$msg
+    |""".trimMargin(),
+cause)
 
 @Suppress("UNUSED_PARAMETER")
 private object Git {
@@ -165,38 +183,41 @@ private object Git {
     const val repo = "git@github.com:ElisaMin/Jweust-template.git"
 
     var latestResult: GitResultW = Result.failure(IllegalStateException("git not run yet"))
+
+
+    var isDismissNextTime = false
+    var isDismissErrNextTime = false
+    var isThrowNetTime = false
+
     var root = File(".")
-    private inline fun <T> wrapper(crossinline block:suspend ()->T) {
-        runCatching { runBlocking {
-            block().let {
-                runCatching {
-                    it as GitResultW
-                }.getOrNull()!!.let { result ->
-                    latestResult = result
-                }
-            }
-        } }.onFailure {
-            throw IllegalStateException("git failed",it)
+    private inline fun  wrapper(crossinline block:()->GitResultW) {
+        runCatching {
+            latestResult = block()
+        }.onFailure {
+            throw IllegalStateException(it)
         }
     }
     fun GitResultW.throws(): GitResult {
         latestResult = this
         onFailure {
-            throw IllegalStateException("git failed",it)
+            throw it
         }
         return getOrThrow()
     }
 
 
     infix fun cloneInto(workdir: File) = wrapper {
-        "git clone -b $currentTag $repo ${workdir.absolutePath}"().throws()
+        throwsNext()
+        "git clone -b $currentTag $repo ${workdir.absolutePath}"()
     }
 
     infix fun add(path: String) = wrapper {
         "git add $path"()
     }
     fun tag() = runBlocking {
-        "git tag"().throws().stdout.lines()
+        "git tag"().map {
+            it.stdout.lines()
+        }.getOrThrow()
     }
 
     infix fun merge(branch:String) = wrapper {
@@ -210,47 +231,51 @@ private object Git {
     infix fun commit(msg: String)  = wrapper {
         "git commit -m \"$msg\""()
     }
-    class PrintAndDataByteOutputStream(
-        err:Boolean = false
-    ):OutputStream() {
-        val data = ByteArrayOutputStream()
-        val print: PrintStream = if(err) System.err else System.out
-        override fun write(b: Int) {
-            print.print(b.toChar())
-            data.write(b)
-        }
-
-        override fun close() {
-            super.close()
-            data.close()
-        }
-
-        override fun toString(): String {
-            val r = data.toString()
-            close()
-            return r
-        }
-    }
-
-    private operator fun String.invoke(throws:Boolean = false,dontPrint: Boolean =false) = project.runCatching {
-        val stdout = PrintAndDataByteOutputStream()
-        val stderr = PrintAndDataByteOutputStream(true)
-        val exitCode = exec {
-            errorOutput = stderr
-            standardOutput = stdout
+    private operator fun String.invoke() = project.runCatching {
+        val msg = StringBuffer()
+        val out = StringBuffer()
+        val err = StringBuffer()
+        val char = '\n'.code
+        runCatching { exec {
+            errorOutput = object : OutputStream() {
+                override fun write(b: Int) {
+                    if (b == char) {
+                        val i = err.lastIndexOf('\n')
+                            .takeIf { it != -1 } ?: 0
+                        val s = err.substring(i)
+                        msg.append(s)
+                    }
+                    err.append(b.toChar())
+                    if (isDismissNextTime || isDismissErrNextTime) return
+                    System.err.write(b)
+                }
+            }
+            standardOutput = object : OutputStream() {
+                override fun write(b: Int) {
+                    if (b == char) {
+                        val i = out.lastIndexOf('\n')
+                            .takeIf { it != -1 } ?: 0
+                        val s = out.substring(i)
+                        msg.append(s)
+                    }
+                    out.append(b.toChar())
+                    if (isDismissNextTime) return
+                    System.out.write(b)
+                }
+            }
             workingDir = root
-            commandLine("cmd","/c",this@invoke)
-        }.run {
-            if(throws) rethrowFailure() else this
-        }.exitValue
-
-        Triple(
-            stdout.toString(),
-            stderr.toString(),
-            exitCode
-        )
+            commandLine("cmd", "/c", this@invoke)
+        }.rethrowFailure() }.onFailure {
+            throw GitException(this@invoke, msg.toString(), it)
+        }.map {
+            GitResult(out.toString(), err.toString(), it.exitValue)
+        }.getOrThrow()
     }.onFailure {
-        if(throws) throw it
+        if(isThrowNetTime) throw it
+    }.also {
+        isThrowNetTime = false
+        isDismissNextTime = false
+        isDismissErrNextTime = false
     }
 
     fun fetch() = wrapper {
@@ -341,6 +366,14 @@ private object Git {
         return@has if (req.isNotEmpty())
             throws()
         else true
+    }
+
+    fun throwsNext() {
+        isThrowNetTime = true
+    }
+
+    fun dismissNext() {
+        isDismissNextTime = true
     }
 
 
