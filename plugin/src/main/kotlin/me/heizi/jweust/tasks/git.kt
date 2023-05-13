@@ -6,6 +6,7 @@ import org.gradle.api.Project
 import java.io.File
 import java.io.IOException
 import java.io.OutputStream
+import java.io.PrintStream
 
 
 /**
@@ -36,7 +37,6 @@ import java.io.OutputStream
 internal fun TaskUpdateRepo.generateValidatedRustProject() {
     Git.project = this.project
     Git.root = jweustRoot
-    Git.isRepoOrThrows()
     var state = "started"
     while (state != "done") {
         _logger.lifecycle("> jweust configuration --$state")
@@ -52,6 +52,7 @@ internal fun TaskUpdateRepo.generateValidatedRustProject() {
  */
 private fun TaskUpdateRepo.nextStateOf(state:String):String? = when(state) {
     "started" -> if (!hashRepo)  "clone" else {
+        Git.isRepoOrThrows()
         Git.throwsNext()
         Git.dismissNext()
         Git checkout "main"
@@ -191,24 +192,13 @@ private object Git {
 
     var root = File(".")
     private inline fun  wrapper(crossinline block:()->GitResultW) {
-        runCatching {
-            latestResult = block()
-        }.onFailure {
-            throw IllegalStateException(it)
-        }
-    }
-    fun GitResultW.throws(): GitResult {
-        latestResult = this
-        onFailure {
-            throw it
-        }
-        return getOrThrow()
+        latestResult = block()
     }
 
 
     infix fun cloneInto(workdir: File) = wrapper {
         throwsNext()
-        "git clone -b $currentTag $repo ${workdir.absolutePath}"()
+        "git clone -b $currentTag $repo ${workdir.absolutePath}"(dir=false)
     }
 
     infix fun add(path: String) = wrapper {
@@ -231,39 +221,35 @@ private object Git {
     infix fun commit(msg: String)  = wrapper {
         "git commit -m \"$msg\""()
     }
-    private operator fun String.invoke() = project.runCatching {
+    private const val lineCode = '\n'.code
+    private fun write(b: Int, sb: StringBuffer,print:PrintStream,msg: StringBuffer) {
+        if (b == lineCode) {
+            val i = sb.lastIndexOf('\n')
+                .takeIf { it != -1 } ?: 0
+            val s = sb.substring(i)
+            msg.append(s)
+        }
+        sb.append(b.toChar())
+        if (isDismissNextTime || isDismissErrNextTime) return
+        print.write(b)
+    }
+    private operator fun String.invoke(dir: Boolean =true) = project.runCatching {
         val msg = StringBuffer()
         val out = StringBuffer()
         val err = StringBuffer()
-        val char = '\n'.code
+
         runCatching { exec {
+            if (dir) workingDir = root
             errorOutput = object : OutputStream() {
                 override fun write(b: Int) {
-                    if (b == char) {
-                        val i = err.lastIndexOf('\n')
-                            .takeIf { it != -1 } ?: 0
-                        val s = err.substring(i)
-                        msg.append(s)
-                    }
-                    err.append(b.toChar())
-                    if (isDismissNextTime || isDismissErrNextTime) return
-                    System.err.write(b)
+                    write(b,err,System.err,msg)
                 }
             }
             standardOutput = object : OutputStream() {
                 override fun write(b: Int) {
-                    if (b == char) {
-                        val i = out.lastIndexOf('\n')
-                            .takeIf { it != -1 } ?: 0
-                        val s = out.substring(i)
-                        msg.append(s)
-                    }
-                    out.append(b.toChar())
-                    if (isDismissNextTime) return
-                    System.out.write(b)
+                    write(b,err,System.out,msg)
                 }
             }
-            workingDir = root
             commandLine("cmd", "/c", this@invoke)
         }.rethrowFailure() }.onFailure {
             throw GitException(this@invoke, msg.toString(), it)
@@ -304,19 +290,8 @@ private object Git {
         .resolve("MERGE_HEAD")
         .exists()
     fun isRepoOrThrows() {
-        require(root.isDirectory) {
-            "jweust root must be exists"
-        }
-        val files = root.listFiles().takeIf { it?.isNotEmpty() == true }
-        require(files!=null) {
-            "jweust root must not be empty : ${root.absolutePath}"
-        }
-        val git = files.find { it.name == ".git" }
-        require(
-            git!=null && git.isDirectory
-                    && git.listFiles()?.isNotEmpty() == true
-        )  {
-            "jweust root must be a git repository : ${root.absolutePath}"
+        require(hashRepoOrThrow()) {
+            "need clone before"
         }
     }
     fun hashRepoOrThrow() = root.run has@{
