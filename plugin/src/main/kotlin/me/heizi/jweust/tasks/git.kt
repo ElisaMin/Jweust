@@ -143,8 +143,10 @@ private fun TaskUpdateRepo.nextStateOf(state:String):String? = when(state) {
 }
 typealias GitResult = Triple<String,String,Int>
 typealias GitResultW = Result<GitResult>
+@Suppress("unused")
 private inline val GitResult.isSucceed get() = code == 0
 private inline val GitResult.stdout get() = first
+@Suppress("unused")
 private inline val GitResult.stderr get() = second
 private inline val GitResult.code get() = third
 class GitException(
