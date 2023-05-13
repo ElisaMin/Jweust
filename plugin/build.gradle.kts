@@ -37,15 +37,7 @@ repositories {
     mavenCentral {
         url = uri("https://maven-central.storage-download.googleapis.com/maven2/")
     }
-    maven {
-        url = uri("https://raw.githubusercontent.com/ElisaMin/Maven/master/")
-    }
 }
-dependencies {
-    implementation(libs.khell.self)
-    implementation(libs.khell.api)
-}
-
 kotlin {
     jvmToolchain(17)
     target {

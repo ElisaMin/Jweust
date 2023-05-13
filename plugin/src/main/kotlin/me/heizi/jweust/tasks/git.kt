@@ -1,6 +1,5 @@
 package me.heizi.jweust.tasks
 
-import kotlinx.coroutines.runBlocking
 import me.heizi.jweust.JweustTasks
 import org.gradle.api.Project
 import java.io.File
@@ -206,11 +205,10 @@ private object Git {
     infix fun add(path: String) = wrapper {
         "git add $path"()
     }
-    fun tag() = runBlocking {
-        "git tag"().map {
-            it.stdout.lines()
-        }.getOrThrow()
-    }
+    fun tag() = "git tag"().
+    map {
+        it.stdout.lines()
+    }.getOrThrow()
 
     infix fun merge(branch:String) = wrapper {
         "git merge $branch"()
